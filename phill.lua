@@ -200,3 +200,5 @@ Players.PlayerAdded:Connect(function(player)
 	task.wait(1)
 	checkPlayer(player.UserId, player.Name)
 end)
+
+return "success"
