@@ -1,3 +1,8 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+
 local ALLOWED_PLACE_IDS = {
     [16472538603] = true,
     [18642421777] = true
