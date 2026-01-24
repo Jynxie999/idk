@@ -1,8 +1,7 @@
-local Players = _G.Players
-local RunService = _G.RunService
-local Lighting = _G.Lighting
-local CoreGui = _G.CoreGui
-local Library = _G.Library
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
 
 local ALLOWED_PLACE_IDS = {
     [16472538603] = true,
