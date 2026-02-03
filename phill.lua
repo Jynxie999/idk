@@ -242,6 +242,7 @@ local function SafeRef(obj)
 end
 
 local Event = SafeRef(ReplicatedStorage:WaitForChild("server"))
+
 local running = true
 local quoteTask = nil
 
@@ -251,7 +252,7 @@ local function GetPlaytimeMinutes()
 	return math.floor((os.clock() - sessionStart) / 60)
 end
 
-local quotes = {
+local baseQuotes = {
 	"Cobra.gg Is #1",
 	"RIP BypassHub...",
 	"Did You Know Im Looking Through Your Webcam 😛",
@@ -273,7 +274,9 @@ local quotes = {
 	"You're Executor Is Shitty",
 	"Yes, Cobra.gg Is The Best",
 	"...!: I hate skids!",
+}
 
+local timeQuotes = {
 	"{user} has been in-game for {time} minutes… still broke?",
 	"{user} really sat here for {time} minutes just to lose 😭",
 	"Imagine playing {time} minutes and still being a pooron, @{user}",
@@ -299,12 +302,24 @@ local function FireMessage(message)
 	firesignal(Event.OnClientEvent, "money", message)
 end
 
+local function GetRandomQuote()
+	if GetPlaytimeMinutes() >= 30 then
+		if math.random() < 0.5 then
+			return baseQuotes[math.random(#baseQuotes)]
+		else
+			return timeQuotes[math.random(#timeQuotes)]
+		end
+	else
+		return baseQuotes[math.random(#baseQuotes)]
+	end
+end
+
 local function StartQuotes()
 	if quoteTask then return end
 
 	quoteTask = task.spawn(function()
 		while running do
-			local raw = quotes[math.random(1, #quotes)]
+			local raw = GetRandomQuote()
 			FireMessage(FormatQuote(raw))
 			task.wait(math.random(minInterval, maxInterval))
 		end
@@ -322,6 +337,7 @@ end
 task.defer(function()
 	FireMessage("Welcome To Your Final Destination For Exploits")
 end)
+
 StartQuotes()
 
 getgenv().StopCobraQuotes = StopQuotes
