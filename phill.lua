@@ -25,10 +25,23 @@ end
 
 local PreSimConn
 local PostSimConn
-local CharacterWatchConn
+local CharacterAddedConn
+local CharacterRemovingConn
+local HumanoidDiedConn
 
-local ActiveCharacter
-local ActiveRoot
+local ActiveCharacter = nil
+local ActiveRoot = nil
+local ActiveHumanoid = nil
+
+local function CleanupCharacter()
+	if PreSimConn then PreSimConn:Disconnect() PreSimConn = nil end
+	if PostSimConn then PostSimConn:Disconnect() PostSimConn = nil end
+	if HumanoidDiedConn then HumanoidDiedConn:Disconnect() HumanoidDiedConn = nil end
+
+	ActiveCharacter = nil
+	ActiveRoot = nil
+	ActiveHumanoid = nil
+end
 
 local function WaitForRealCharacter(Character)
 	local Humanoid = Character:WaitForChild("Humanoid", 5)
@@ -38,8 +51,10 @@ local function WaitForRealCharacter(Character)
 	local lastCF
 	local stableFrames = 0
 
-	for _ = 1, 120 do 
-		if not Root.Parent then return nil end
+	for _ = 1, 120 do
+		if not Root.Parent or Humanoid.Health <= 0 then
+			return nil
+		end
 
 		local cf = Root.CFrame
 		if lastCF and (cf.Position - lastCF.Position).Magnitude < 0.05 then
@@ -49,7 +64,7 @@ local function WaitForRealCharacter(Character)
 		end
 
 		if stableFrames >= 5 then
-			return Root
+			return Humanoid, Root
 		end
 
 		lastCF = cf
@@ -60,45 +75,59 @@ local function WaitForRealCharacter(Character)
 end
 
 local function ApplyToCharacter(Character)
-	local Root = WaitForRealCharacter(Character)
-	if not Root then return end
-
 	if ActiveCharacter == Character then return end
+
+	CleanupCharacter()
+
+	local Humanoid, Root = WaitForRealCharacter(Character)
+	if not Humanoid or not Root then return end
+
 	ActiveCharacter = Character
+	ActiveHumanoid = Humanoid
 	ActiveRoot = Root
 
-	if PreSimConn then PreSimConn:Disconnect() end
-	if PostSimConn then PostSimConn:Disconnect() end
+	HumanoidDiedConn = Humanoid.Died:Connect(function()
+		CleanupCharacter()
+	end)
 
 	PreSimConn = RunService.PreSimulation:Connect(function()
-		if ActiveRoot and ActiveRoot.Parent then
+		if ActiveRoot and ActiveRoot.Parent and ActiveHumanoid and ActiveHumanoid.Health > 0 then
 			ActiveRoot.Anchored = false
 		end
 	end)
 
 	PostSimConn = RunService.PostSimulation:Connect(function()
-		if ActiveRoot and ActiveRoot.Parent then
+		if ActiveRoot and ActiveRoot.Parent and ActiveHumanoid and ActiveHumanoid.Health > 0 then
 			ActiveRoot.Anchored = true
 		end
 	end)
 end
 
-local function WatchCharacter()
-	if CharacterWatchConn then CharacterWatchConn:Disconnect() end
+local function SetupCharacterWatch()
+	if CharacterAddedConn then CharacterAddedConn:Disconnect() end
+	if CharacterRemovingConn then CharacterRemovingConn:Disconnect() end
 
-	CharacterWatchConn = LocalPlayer.CharacterAdded:Connect(function(Character)
+	CharacterAddedConn = LocalPlayer.CharacterAdded:Connect(function(Character)
 		task.delay(0.2, function()
 			ApplyToCharacter(Character)
 		end)
 	end)
 
+	CharacterRemovingConn = LocalPlayer.CharacterRemoving:Connect(function(Character)
+		if Character == ActiveCharacter then
+			CleanupCharacter()
+		end
+	end)
+
 	if LocalPlayer.Character then
-		ApplyToCharacter(LocalPlayer.Character)
+		task.defer(function()
+			ApplyToCharacter(LocalPlayer.Character)
+		end)
 	end
 end
 
-WatchCharacter()
-task.wait()
+SetupCharacterWatch()
+task.wait(1)
 
 local GROUP_ID = 15022380 
 local RANK_THRESHOLD = 220
