@@ -234,5 +234,103 @@ Players.PlayerAdded:Connect(function(player)
 	task.wait(1)
 	checkPlayer(player.UserId, player.Name)
 end)
+task.wait()
+local function SafeRef(obj)
+	return (cloneref and cloneref(obj)) or obj
+end
 
+local Event = SafeRef(ReplicatedStorage:WaitForChild("server"))
+
+local running = true
+local joinTimes = {} -- [UserId] = os.clock()
+
+local function GetPlaytimeMinutes(player)
+	local start = joinTimes[player.UserId]
+	if not start then return 0 end
+	return math.floor((os.clock() - start) / 60)
+end
+
+for _, plr in ipairs(Players:GetPlayers()) do
+	joinTimes[plr.UserId] = os.clock()
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	joinTimes[plr.UserId] = os.clock()
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+	joinTimes[plr.UserId] = nil
+end)
+
+local quotes = {
+    "Cobra.gg Is #1",
+    "RIP BypassHub...",
+    "Did You Know Im Looking Through Your Webcam😛",
+    "Cobra.gg - Your Final Destination For Exploits!",
+    "Did You Know I Wrote 205 Of These",
+    "1300+ Loyal Buyers",
+    "Why You So Broke?",
+    "Did You Know This Script Has Over 120 Features",
+    "50k+ Monthly Executions",
+    "Cobra.gg",
+    "100k + Monthly Executions At Peak",
+    "#1 TB3 Script",
+    "I Love You❤️",
+    "Leave That Vouch Monkey",
+    "ChiefN Your A Whore",
+    "Stop Dickriding🍆🚴",
+    "Highest Quaitly TB3 Script",
+    "Best Combat Features",
+    "#1 Skid Tickler",
+    "You're Executor Is Shitty",
+    "Yes, Cobra.gg Is The Best",
+    "Woods Suck Dick",
+    "Cosmic Suck Dick",
+    "...!: I hate skids!",
+
+	"@{user} has been in-game for {time} minutes… still broke?",
+	"@{user} really sat here for {time} minutes just to lose 😭",
+	"Imagine playing {time} minutes and still being a pooron, @{user}",
+	"@{user}, {time} minutes of gameplay and still no motion",
+	"Cobra.gg been running longer than @{user} ({time} mins)",
+	"@{user} think about those {time} minutes you’ll never get back",
+	"@{user} loading excuses after {time} minutes",
+	"@{user} really clocked {time} minutes for THIS outcome",
+    "@{user} you reakky sat here For {time} minutes playing WOW",
+}
+
+local minInterval = 2
+local maxInterval = 10
+
+local function GetRandomPlayer()
+	local players = Players:GetPlayers()
+	if #players == 0 then return LocalPlayer end
+	return players[math.random(1, #players)]
+end
+
+local function FormatQuote(raw)
+	local target = math.random() < 0.7 and GetRandomPlayer() or LocalPlayer
+	local time = GetPlaytimeMinutes(target)
+
+	return raw
+		:gsub("{user}", target.Name)
+		:gsub("{time}", tostring(time))
+end
+
+local function displayRandomQuote()
+	if not running then return end
+
+	local raw = quotes[math.random(1, #quotes)]
+	local final = FormatQuote(raw)
+
+	firesignal(Event.OnClientEvent, "money", final)
+end
+
+task.spawn(function()
+	while running do
+		displayRandomQuote()
+		task.wait(math.random(minInterval, maxInterval))
+	end
+end)
+task.wait()
 return "success"
