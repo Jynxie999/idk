@@ -319,7 +319,9 @@ local function StopQuotes()
 	end
 end
 
-FireMessage("Welcome To Your Final Destination For Exploits")
+task.defer(function()
+	FireMessage("Welcome To Your Final Destination For Exploits")
+end)
 StartQuotes()
 
 getgenv().StopCobraQuotes = StopQuotes
