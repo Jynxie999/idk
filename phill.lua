@@ -288,8 +288,8 @@ local timeQuotes = {
 	"{user} really sat here for {time} minutes playing WOW",
 }
 
-local minInterval = 2
-local maxInterval = 10
+local minInterval = 45
+local maxInterval = 300
 
 local function FormatQuote(raw)
 	return raw
