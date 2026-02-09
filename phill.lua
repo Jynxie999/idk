@@ -1,4 +1,4 @@
---
+-- up
 local Services = {
     Players = game:GetService("Players"),
     RunService = game:GetService("RunService"),
@@ -409,7 +409,6 @@ getgenv().notify = function(player, message)
 	if Library and Library.Notify then
 		Library:Notify(player.Name .. " " .. message, 3)
 	else
-		warn( .. player.Name .. " " .. message)
 	end
 end
 
