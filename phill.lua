@@ -417,6 +417,7 @@ getgenv().alert = function(player, reason)
 		DetectedPlayers[player] = {
 			TeleportFlagged = false,
 			StateFlagged = false,
+			AnticheatDisablerFlagged = false,
 		}
 
 		if Toggles and Toggles.EnableExploitNotify and Toggles.EnableExploitNotify.Value then
@@ -534,11 +535,39 @@ getgenv().monitorPlayer = function(player)
 		end)
 	end
 
-	player:GetAttributeChangedSignal("LastACPos"):Connect(function()
-		if player:GetAttribute("LastACPos") == nil then
-			alert(player, "Teleport")
+local function CheckAntiCheatDisabler(player)
+	if not Toggles
+		or not Toggles.EnableAnticheatDisablerDetect
+		or not Toggles.EnableAnticheatDisablerDetect.Value then
+		return
+	end
+
+	if not DetectedPlayers[player] then return end
+	if DetectedPlayers[player].AnticheatDisablerFlagged then return end
+
+	local value = player:GetAttribute("LastAcPos")
+
+	if value == nil then
+		DetectedPlayers[player].AnticheatDisablerFlagged = true
+
+		if Toggles.EnableExploitNotify and Toggles.EnableExploitNotify.Value then
+			notify(player, "Is Using An Anticheat Disabler. There Possibly Using Sleepyhub Or Another Cobra.gg User")
 		end
-	end)
+
+		alert(player, "AntiCheatDisabler")
+	end
+end
+
+
+task.delay(3, function()
+	if player.Parent then
+		CheckAntiCheatDisabler(player)
+	end
+end)
+
+player:GetAttributeChangedSignal("LastAcPos"):Connect(function()
+	CheckAntiCheatDisabler(player)
+end)
 
 	if player.Character then
 		setupCharacter(player.Character)
