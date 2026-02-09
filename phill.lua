@@ -417,8 +417,12 @@ getgenv().alert = function(player, reason)
 			TeleportFlagged = false,
 			StateFlagged = false,
 			AnticheatDisablerFlagged = false,
+			InitialNotifySent = false,
 		}
+	end
 
+	if not DetectedPlayers[player].InitialNotifySent then
+		DetectedPlayers[player].InitialNotifySent = true
 		if Toggles and Toggles.EnableExploitNotify and Toggles.EnableExploitNotify.Value then
 			notify(player, "Has Set Off An Exploit Detection. THEY ARE MOST LIKELY CHEATING")
 		end
@@ -436,6 +440,13 @@ getgenv().alert = function(player, reason)
 	if reason == "MovementState" and not DetectedPlayers[player].StateFlagged then
 		DetectedPlayers[player].StateFlagged = true
 	end
+
+	if reason == "AntiCheatDisabler" and not DetectedPlayers[player].AnticheatDisablerFlagged then
+		DetectedPlayers[player].AnticheatDisablerFlagged = true
+		if Toggles and Toggles.EnableAnticheatDisablerDetect and Toggles.EnableAnticheatDisablerDetect.Value then
+			notify(player, "Is Using An Anticheat Disabler. They're Possibly Using Sleepyhub Or Another Cobra.gg User")
+		end
+	end
 end
 
 local function CheckAntiCheatDisabler(player)
@@ -450,13 +461,14 @@ local function CheckAntiCheatDisabler(player)
 
 	local value = player:GetAttribute("LastAcPos")
 
+	if value ~= nil then
+		return
+	end
+	
+	task.wait(3)
+	value = player:GetAttribute("LastAcPos")
+	
 	if value == nil then
-		DetectedPlayers[player].AnticheatDisablerFlagged = true
-
-		if Toggles.EnableAnticheatDisablerDetect and Toggles.EnableAnticheatDisablerDetect.Value then
-			notify(player, "Is Using An Anticheat Disabler. They're Possibly Using Sleepyhub Or Another Cobra.gg User")
-		end
-
 		alert(player, "AntiCheatDisabler")
 	end
 end
@@ -483,7 +495,34 @@ getgenv().monitorPlayer = function(player)
 			end
 		end)
 
-		local STATE_GRACE = 2
+		local lastPosition = root.Position
+		local lastUpdateTime = os.clock()
+		
+		task.spawn(function()
+			while humanoid.Parent and player.Parent and root.Parent do
+				task.wait(0.1)
+				
+				local currentPosition = root.Position
+				local currentTime = os.clock()
+				local deltaTime = currentTime - lastUpdateTime
+				
+				if deltaTime > 0.05 then
+					local distance = (currentPosition - lastPosition).Magnitude
+					local speed = distance / deltaTime
+					
+					if speed > 150 and humanoid.Health > 0 then
+						if humanoid:GetState() ~= Enum.HumanoidStateType.Seated then
+							alert(player, "Teleport")
+						end
+					end
+					
+					lastPosition = currentPosition
+					lastUpdateTime = currentTime
+				end
+			end
+		end)
+
+		local STATE_GRACE = 2.5
 		local activeState = nil
 		local stateStart = 0
 		local stateThread = nil
@@ -549,6 +588,7 @@ getgenv().monitorPlayer = function(player)
 			if newState == Enum.HumanoidStateType.Physics
 			or newState == Enum.HumanoidStateType.Freefall
 			or newState == Enum.HumanoidStateType.FallingDown
+			or newState == Enum.HumanoidStateType.Ragdoll
 			or newState == Enum.HumanoidStateType.None then
 				watchState(newState)
 			else
@@ -557,14 +597,16 @@ getgenv().monitorPlayer = function(player)
 		end)
 	end
 
-	task.delay(2, function()
+	task.delay(5, function()
 		if player.Parent then
 			CheckAntiCheatDisabler(player)
 		end
 	end)
 
-	player:GetAttributeChangedSignal("LastAcPos"):Connect(function()
-		CheckAntiCheatDisabler(player)
+	player:GetAttributeChangedSignal("LastACPos"):Connect(function()
+		if DetectedPlayers[player] and not DetectedPlayers[player].AnticheatDisablerFlagged then
+			DetectedPlayers[player].AnticheatDisablerFlagged = false
+		end
 	end)
 
 	if player.Character then
