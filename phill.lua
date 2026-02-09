@@ -1,258 +1,306 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
-local CoreGui = game:GetService("CoreGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local ALLOWED_PLACE_IDS = {
-    [16472538603] = true,
-    [18642421777] = true
+local Services = {
+    Players           = game:GetService("Players"),
+    RunService        = game:GetService("RunService"),
+    Lighting          = game:GetService("Lighting"),
+    CoreGui           = game:GetService("CoreGui"),
+    ReplicatedStorage = game:GetService("ReplicatedStorage"),
+    HttpService       = game:GetService("HttpService"),
+    TeleportService   = game:GetService("TeleportService"),
 }
 
-if not ALLOWED_PLACE_IDS[game.PlaceId] then
+local CONFIG = {
+    AllowedPlaces = { [16472538603] = true, [18642421777] = true },
+    StaffGroupId  = 15022380,
+    StaffRankMin  = 220,
+    QuoteIntervals = { Min = 45, Max = 300 },
+}
+
+if not CONFIG.AllowedPlaces[game.PlaceId] then
     task.defer(function()
-        game.Players.LocalPlayer:Kick("Wyd Retard Wrong Game")
+        Services.Players.LocalPlayer:Kick("Wrong game location.")
     end)
     while true do task.wait() end
 end
 
-task.wait()
+local LocalPlayer = Services.Players.LocalPlayer
+while not LocalPlayer do task.wait() end
 
-local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do
-	Players.PlayerAdded:Wait()
-	LocalPlayer = Players.LocalPlayer
+local AnchorSystem = {}
+AnchorSystem.__index = AnchorSystem
+
+function AnchorSystem.new()
+    local self = setmetatable({}, AnchorSystem)
+    self.Connections = {}
+    self.TargetRoot  = nil
+    self.Enabled     = false
+    return self
 end
 
-local PreSimConn
-local PostSimConn
-local CharacterAddedConn
-local CharacterRemovingConn
-local HumanoidDiedConn
+function AnchorSystem:Attach(root)
+    self:Detach()
+    if not root or not root.Parent then return end
+    self.TargetRoot = root
 
-local ActiveCharacter = nil
-local ActiveRoot = nil
-local ActiveHumanoid = nil
+    table.insert(self.Connections, Services.RunService.PreSimulation:Connect(function()
+        if self.Enabled and self.TargetRoot and self.TargetRoot.Parent then
+            self.TargetRoot.Anchored = false
+        end
+    end))
 
-local function CleanupCharacter()
-	if PreSimConn then PreSimConn:Disconnect() PreSimConn = nil end
-	if PostSimConn then PostSimConn:Disconnect() PostSimConn = nil end
-	if HumanoidDiedConn then HumanoidDiedConn:Disconnect() HumanoidDiedConn = nil end
+    table.insert(self.Connections, Services.RunService.PostSimulation:Connect(function()
+        if self.Enabled and self.TargetRoot and self.TargetRoot.Parent then
+            self.TargetRoot.Anchored = true
+        end
+    end))
 
-	ActiveCharacter = nil
-	ActiveRoot = nil
-	ActiveHumanoid = nil
+    self.Enabled = true
 end
 
-local function WaitForRealCharacter(Character)
-	local Humanoid = Character:WaitForChild("Humanoid", 5)
-	local Root = Character:WaitForChild("HumanoidRootPart", 5)
-	if not Humanoid or not Root then return nil end
-
-	local lastCF
-	local stableFrames = 0
-
-	for _ = 1, 120 do
-		if not Root.Parent or Humanoid.Health <= 0 then
-			return nil
-		end
-
-		local cf = Root.CFrame
-		if lastCF and (cf.Position - lastCF.Position).Magnitude < 0.05 then
-			stableFrames += 1
-		else
-			stableFrames = 0
-		end
-
-		if stableFrames >= 5 then
-			return Humanoid, Root
-		end
-
-		lastCF = cf
-		RunService.Heartbeat:Wait()
-	end
-
-	return nil
+function AnchorSystem:Detach()
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    if self.TargetRoot and self.TargetRoot.Parent then
+        self.TargetRoot.Anchored = false
+    end
+    self.TargetRoot = nil
+    self.Enabled = false
 end
 
-local function ApplyToCharacter(Character)
-	if ActiveCharacter == Character then return end
+local CharacterLifecycle = {}
+CharacterLifecycle.__index = CharacterLifecycle
 
-	CleanupCharacter()
-
-	local Humanoid, Root = WaitForRealCharacter(Character)
-	if not Humanoid or not Root then return end
-
-	ActiveCharacter = Character
-	ActiveHumanoid = Humanoid
-	ActiveRoot = Root
-
-	HumanoidDiedConn = Humanoid.Died:Connect(function()
-		CleanupCharacter()
-	end)
-
-	PreSimConn = RunService.PreSimulation:Connect(function()
-		if ActiveRoot and ActiveRoot.Parent and ActiveHumanoid and ActiveHumanoid.Health > 0 then
-			ActiveRoot.Anchored = false
-		end
-	end)
-
-	PostSimConn = RunService.PostSimulation:Connect(function()
-		if ActiveRoot and ActiveRoot.Parent and ActiveHumanoid and ActiveHumanoid.Health > 0 then
-			ActiveRoot.Anchored = true
-		end
-	end)
+function CharacterLifecycle.new(anchorSystem)
+    local self = setmetatable({}, CharacterLifecycle)
+    self.Anchor = anchorSystem
+    self.Connections = {}
+    self.CurrentChar = nil
+    return self
 end
 
-local function SetupCharacterWatch()
-	if CharacterAddedConn then CharacterAddedConn:Disconnect() end
-	if CharacterRemovingConn then CharacterRemovingConn:Disconnect() end
+function CharacterLifecycle:Initialize()
+    table.insert(self.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
+        task.delay(0.2, function()
+            self:TryApplyToCharacter(char)
+        end)
+    end))
 
-	CharacterAddedConn = LocalPlayer.CharacterAdded:Connect(function(Character)
-		task.delay(0.2, function()
-			ApplyToCharacter(Character)
-		end)
-	end)
+    table.insert(self.Connections, LocalPlayer.CharacterRemoving:Connect(function(char)
+        if char == self.CurrentChar then
+            self:Clear()
+        end
+    end))
 
-	CharacterRemovingConn = LocalPlayer.CharacterRemoving:Connect(function(Character)
-		if Character == ActiveCharacter then
-			CleanupCharacter()
-		end
-	end)
-
-	if LocalPlayer.Character then
-		task.defer(function()
-			ApplyToCharacter(LocalPlayer.Character)
-		end)
-	end
+    if LocalPlayer.Character then
+        task.defer(function()
+            self:TryApplyToCharacter(LocalPlayer.Character)
+        end)
+    end
 end
 
-SetupCharacterWatch()
-task.wait(1)
+function CharacterLifecycle:TryApplyToCharacter(char)
+    if self.CurrentChar == char then return end
+    self:Clear()
 
-local GROUP_ID = 15022380 
-local RANK_THRESHOLD = 220
+    local hum  = char:WaitForChild("Humanoid", 8)
+    local root = char:WaitForChild("HumanoidRootPart", 8)
+    if not (hum and root) then return end
 
-local blur = Instance.new("BlurEffect", Lighting)
-blur.Size = 0
-blur.Enabled = false
+    local stable = 0
+    local last = root.Position
+    for _ = 1, 60 do
+        if not root.Parent or hum.Health <= 0 then return end
+        local pos = root.Position
+        if (pos - last).Magnitude < 0.12 then stable += 1 else stable = 0 end
+        if stable >= 4 then break end
+        last = pos
+        task.wait()
+    end
 
-local screenGui = Instance.new("ScreenGui", CoreGui)
-screenGui.Name = "FoundationOverlay"
+    if not root.Parent or hum.Health <= 0 then return end
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 300, 0, 180)
-frame.Position = UDim2.new(0.5, -150, 0.5, -90)
-frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-frame.BackgroundTransparency = 0.1
-frame.BorderSizePixel = 0
-frame.Visible = false
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    self.CurrentChar = char
+    self.Anchor:Attach(root)
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, -20, 0, 60)
-title.Position = UDim2.new(0, 10, 0, 10)
-title.BackgroundTransparency = 1
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-title.TextWrapped = true
-title.Text = ""
-
-local buttonStay = Instance.new("TextButton", frame)
-buttonStay.Size = UDim2.new(0.45, 0, 0, 40)
-buttonStay.Position = UDim2.new(0.05, 0, 1, -50)
-buttonStay.Text = "Stay"
-buttonStay.Font = Enum.Font.Gotham
-buttonStay.TextSize = 14
-buttonStay.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-buttonStay.TextColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", buttonStay).CornerRadius = UDim.new(0, 6)
-
-local buttonHop = buttonStay:Clone()
-buttonHop.Text = "Server Hop"
-buttonHop.Position = UDim2.new(0.5, 0, 1, -50)
-buttonHop.Parent = frame
-
-buttonHop.MouseButton1Click:Connect(function()
-	local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-	local response = request({Url = url, Method = "GET"})
-    local HttpService = game:GetService("HttpService")
-	local data = HttpService:JSONDecode(response.Body)
-    local TeleportService = game:GetService("TeleportService")
-	for _, server in ipairs(data.data) do
-		if server.playing < server.maxPlayers then
-			TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
-			break
-		end
-	end
-end)
-
-buttonStay.MouseButton1Click:Connect(function()
-	blur.Enabled = false
-	blur.Size = 0
-	frame.Visible = false
-end)
-
-local function checkPlayer(userId, playerName)
-local HttpService = game:GetService("HttpService")
-	local success, result = pcall(function()
-		local res = request({
-			Url = "https://groups.roblox.com/v1/users/" .. userId .. "/groups/roles",
-			Method = "GET"
-		})
-		return HttpService:JSONDecode(res.Body)
-	end)
-
-	if not success then return end
-
-	for _, group in ipairs(result) do
-		if group.group.id == GROUP_ID then
-			local rank = group.role.rank
-			local roleName = group.role.name
-			if rank >= RANK_THRESHOLD then
-				warn(playerName .. " is rank " .. rank .. " (" .. roleName .. ")")
-				Library:Notify(playerName .. " is " .. roleName .. " (Rank " .. rank .. ")", 3)
-				blur.Enabled = true
-				blur.Size = 24
-				title.Text = playerName .. " is " .. roleName .. "\n(Rank " .. rank .. ")\nDo you want to leave?"
-				frame.Visible = true
-			end
-		end
-	end
+    table.insert(self.Connections, hum.Died:Connect(function()
+        self:Clear()
+    end))
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
-	if player ~= LocalPlayer then
-		task.spawn(function()
-			checkPlayer(player.UserId, player.Name)
-		end)
-	end
+function CharacterLifecycle:Clear()
+    self.Anchor:Detach()
+    self.CurrentChar = nil
 end
 
-Players.PlayerAdded:Connect(function(player)
-	task.wait(1)
-	checkPlayer(player.UserId, player.Name)
-end)
-task.wait()
-
-local function SafeRef(obj)
-	return (cloneref and cloneref(obj)) or obj
+function CharacterLifecycle:Destroy()
+    for _, c in ipairs(self.Connections) do c:Disconnect() end
+    self:Clear()
 end
 
-local Event = SafeRef(ReplicatedStorage:WaitForChild("server"))
+local StaffAlertSystem = {}
+StaffAlertSystem.__index = StaffAlertSystem
 
-local running = true
-local quoteTask = nil
-
-local sessionStart = os.clock()
-
-local function GetPlaytimeMinutes()
-	return math.floor((os.clock() - sessionStart) / 60)
+function StaffAlertSystem.new()
+    local self = setmetatable({}, StaffAlertSystem)
+    self.Blur   = nil
+    self.Gui    = nil
+    self.Frame  = nil
+    self.Title  = nil
+    self.Connections = {}
+    return self
 end
 
-local baseQuotes = {
+function StaffAlertSystem:BuildUI()
+    self.Blur = Instance.new("BlurEffect")
+    self.Blur.Size = 0
+    self.Blur.Enabled = false
+    self.Blur.Parent = Services.Lighting
+
+    self.Gui = Instance.new("ScreenGui")
+    self.Gui.Name = "FoundationOverlay"
+    self.Gui.ResetOnSpawn = false
+    self.Gui.Parent = Services.CoreGui
+
+    self.Frame = Instance.new("Frame")
+    self.Frame.Size = UDim2.new(0, 340, 0, 210)
+    self.Frame.Position = UDim2.new(0.5, -170, 0.5, -105)
+    self.Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    self.Frame.BackgroundColor3 = Color3.fromRGB(18,18,22)
+    self.Frame.BackgroundTransparency = 0.25
+    self.Frame.BorderSizePixel = 0
+    self.Frame.Visible = false
+    self.Frame.Parent = self.Gui
+    Instance.new("UICorner", self.Frame).CornerRadius = UDim.new(0, 12)
+
+    self.Title = Instance.new("TextLabel")
+    self.Title.Size = UDim2.new(1, -24, 0, 90)
+    self.Title.Position = UDim2.new(0,12,0,12)
+    self.Title.BackgroundTransparency = 1
+    self.Title.TextColor3 = Color3.new(1,1,1)
+    self.Title.Font = Enum.Font.GothamBold
+    self.Title.TextSize = 18
+    self.Title.TextWrapped = true
+    self.Title.Text = ""
+    self.Title.Parent = self.Frame
+
+    local stay = Instance.new("TextButton")
+    stay.Size = UDim2.new(0.42,0,0,50)
+    stay.Position = UDim2.new(0.06,0,1,-62)
+    stay.BackgroundColor3 = Color3.fromRGB(40,180,60)
+    stay.TextColor3 = Color3.new(1,1,1)
+    stay.Font = Enum.Font.GothamSemibold
+    stay.TextSize = 16
+    stay.Text = "Stay"
+    stay.Parent = self.Frame
+    Instance.new("UICorner", stay).CornerRadius = UDim.new(0,8)
+
+    local hop = stay:Clone()
+    hop.Text = "Server Hop"
+    hop.Position = UDim2.new(0.52,0,1,-62)
+    hop.BackgroundColor3 = Color3.fromRGB(220,60,60)
+    hop.Parent = self.Frame
+
+    stay.MouseButton1Click:Connect(function()
+        self:Hide()
+    end)
+
+    hop.MouseButton1Click:Connect(function()
+        self:ServerHop()
+    end)
+end
+
+function StaffAlertSystem:Show(message)
+    if not self.Frame then self:BuildUI() end
+    self.Title.Text = message
+    self.Blur.Size = 24
+    self.Blur.Enabled = true
+    self.Frame.Visible = true
+end
+
+function StaffAlertSystem:Hide()
+    if self.Blur then
+        self.Blur.Enabled = false
+        self.Blur.Size = 0
+    end
+    if self.Frame then
+        self.Frame.Visible = false
+    end
+end
+
+function StaffAlertSystem:ServerHop()
+    task.spawn(function()
+        local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
+        local ok, resp = pcall(request, {Url=url, Method="GET"})
+        if not ok then return end
+        local data = Services.HttpService:JSONDecode(resp.Body)
+        for _, s in ipairs(data.data or {}) do
+            if s.playing < s.maxPlayers then
+                Services.TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id)
+                return
+            end
+        end
+    end)
+end
+
+function StaffAlertSystem:CheckPlayer(player)
+    task.spawn(function()
+        local ok, res = pcall(request, {
+            Url = "https://groups.roblox.com/v1/users/"..player.UserId.."/groups/roles",
+            Method = "GET"
+        })
+        if not ok or not res.Body then return end
+
+        local groups = Services.HttpService:JSONDecode(res.Body)
+        for _, g in ipairs(groups) do
+            if g.group.id == CONFIG.StaffGroupId and g.role.rank >= CONFIG.StaffRankMin then
+                local msg = ("%s\n%s (Rank %d)\nLeave server?"):format(
+                    player.Name, g.role.name, g.role.rank)
+                self:Show(msg)
+                warn("[STAFF] " .. msg:gsub("\n"," "))
+                return
+            end
+        end
+    end)
+end
+
+function StaffAlertSystem:WatchPlayers()
+    for _, p in Services.Players:GetPlayers() do
+        if p ~= LocalPlayer then self:CheckPlayer(p) end
+    end
+
+    table.insert(self.Connections, Services.Players.PlayerAdded:Connect(function(p)
+        if p ~= LocalPlayer then task.delay(1.3, function() self:CheckPlayer(p) end) end
+    end))
+end
+
+function StaffAlertSystem:Destroy()
+    for _, c in self.Connections do c:Disconnect() end
+    if self.Blur then self.Blur:Destroy() end
+    if self.Gui then self.Gui:Destroy() end
+end
+
+-- ════════════════════════════════════════════════════════════════
+--  Quote Spam System
+-- ════════════════════════════════════════════════════════════════
+
+local QuoteSystem = {}
+QuoteSystem.__index = QuoteSystem
+
+function QuoteSystem.new()
+    local self = setmetatable({}, QuoteSystem)
+    self.Running = false
+    self.Task = nil
+    self.SessionStart = os.clock()
+    self.Event = Services.ReplicatedStorage:WaitForChild("server", 8)
+    return self
+end
+
+function QuoteSystem:GetPlaytime()
+    return math.floor((os.clock() - self.SessionStart) / 60)
+end
+
+local BaseQuotes = {
 	"Cobra.gg Is #1",
 	"RIP BypassHub...",
 	"Did You Know Im Looking Through Your Webcam 😛",
@@ -276,7 +324,7 @@ local baseQuotes = {
 	"...!: I hate skids!",
 }
 
-local timeQuotes = {
+local TimeQuotes = {
 	"{user} has been in-game for {time} minutes… still broke?",
 	"{user} really sat here for {time} minutes just to lose 😭",
 	"Imagine playing {time} minutes and still being a pooron, @{user}",
@@ -288,57 +336,68 @@ local timeQuotes = {
 	"{user} really sat here for {time} minutes playing WOW",
 }
 
-local minInterval = 45
-local maxInterval = 300
-
-local function FormatQuote(raw)
-	return raw
-		:gsub("{user}", LocalPlayer.Name)
-		:gsub("{time}", tostring(GetPlaytimeMinutes()))
+function QuoteSystem:GetRandom()
+    if self:GetPlaytime() >= 30 and math.random() < 0.5 then
+        return TimeQuotes[math.random(#TimeQuotes)]
+    end
+    return BaseQuotes[math.random(#BaseQuotes)]
 end
 
-local function FireMessage(message)
-	if not running then return end
-	firesignal(Event.OnClientEvent, "money", message)
+function QuoteSystem:Format(str)
+    return str
+        :gsub("{user}", LocalPlayer.Name)
+        :gsub("{time}", tostring(self:GetPlaytime()))
 end
 
-local function GetRandomQuote()
-	if GetPlaytimeMinutes() >= 30 then
-		if math.random() < 0.5 then
-			return baseQuotes[math.random(#baseQuotes)]
-		else
-			return timeQuotes[math.random(#timeQuotes)]
-		end
-	else
-		return baseQuotes[math.random(#baseQuotes)]
-	end
+function QuoteSystem:Fire(msg)
+    if self.Event and self.Running then
+        firesignal(self.Event.OnClientEvent, "money", msg)
+    end
 end
 
-local function StartQuotes()
-	if quoteTask then return end
-
-	quoteTask = task.spawn(function()
-		while running do
-			local raw = GetRandomQuote()
-			FireMessage(FormatQuote(raw))
-			task.wait(math.random(minInterval, maxInterval))
-		end
-	end)
+function QuoteSystem:Start()
+    if self.Running then return end
+    self.Running = true
+    self.Task = task.spawn(function()
+        self:Fire("Welcome • Final Destination For Exploits")
+        while self.Running do
+            local q = self:GetRandom()
+            self:Fire(self:Format(q))
+            task.wait(math.random(CONFIG.QuoteIntervals.Min, CONFIG.QuoteIntervals.Max))
+        end
+    end)
 end
 
-local function StopQuotes()
-	running = false
-	if quoteTask then
-		task.cancel(quoteTask)
-		quoteTask = nil
-	end
+function QuoteSystem:Stop()
+    self.Running = false
+    if self.Task then task.cancel(self.Task) self.Task = nil end
 end
 
-task.defer(function()
-	FireMessage("Welcome To Your Final Destination For Exploits")
-end)
+local function UnloadAll(systems)
+    for _, sys in pairs(systems) do
+        if sys.Stop   then sys:Stop()   end
+        if sys.Destroy then sys:Destroy() end
+        if sys.Detach then sys:Detach() end
+    end
+    getgenv().CobraUnload = nil
+end
 
-StartQuotes()
+local Anchor   = AnchorSystem.new()
+local CharLife = CharacterLifecycle.new(Anchor)
+local Alerts   = StaffAlertSystem.new()
+local Quotes   = QuoteSystem.new()
 
-getgenv().StopCobraQuotes = StopQuotes
+CharLife:Initialize()
+Alerts:WatchPlayers()
+Quotes:Start()
+
+getgenv().CobraUnload = function()
+    UnloadAll({
+        Anchor   = Anchor,
+        CharLife = CharLife,
+        Alerts   = Alerts,
+        Quotes   = Quotes,
+    })
+end
+
 return "success"
