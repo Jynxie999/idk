@@ -1,3 +1,4 @@
+--
 local Services = {
     Players = game:GetService("Players"),
     RunService = game:GetService("RunService"),
@@ -254,7 +255,7 @@ function StaffAlertSystem:CheckPlayer(player)
         })
         if not ok or not res or not res.Body then return end
         local groups = Services.HttpService:JSONDecode(res.Body)
-        for _, g in ipairs(groups) do
+        for _, g in ipairs(groups.data or {}) do
             if g.group and g.group.id == CONFIG.StaffGroupId and g.role and g.role.rank >= CONFIG.StaffRankMin then
                 local msg = ("%s\n%s (Rank %d)\nLeave server?"):format(
                     player.Name, g.role.name or "?", g.role.rank)
@@ -327,7 +328,7 @@ local TimeQuotes = {
     "Imagine playing {time} minutes and still being a pooron, @{user}",
     "{user}, {time} minutes of gameplay and still no motion",
     "Cobra.gg been running for {time} minutes straight 😈",
-    "{user} think about those {time} minutes you’ll never get back",
+    "{user} think about those {time} minutes you'll never get back",
     "{user} loading excuses after {time} minutes",
     "{user} really clocked {time} minutes for THIS outcome",
     "{user} really sat here for {time} minutes playing WOW",
@@ -444,7 +445,6 @@ getgenv().monitorPlayer = function(player)
 		local root = character:FindFirstChild("HumanoidRootPart")
 		if not humanoid or not root then return end
 
-		-- Godmode check
 		task.spawn(function()
 			while humanoid.Parent and player.Parent do
 				if typeof(humanoid.Health) == "number" and humanoid.Health ~= humanoid.Health then
@@ -547,13 +547,13 @@ getgenv().monitorPlayer = function(player)
 	player.CharacterAdded:Connect(setupCharacter)
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
+for _, player in ipairs(Services.Players:GetPlayers()) do
 	if player ~= LocalPlayer then
 		monitorPlayer(player)
 	end
 end
 
-Players.PlayerAdded:Connect(function(player)
+Services.Players.PlayerAdded:Connect(function(player)
 	if player ~= LocalPlayer then
 		monitorPlayer(player)
 	end
