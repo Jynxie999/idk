@@ -280,10 +280,6 @@ function StaffAlertSystem:Destroy()
     if self.Gui then self.Gui:Destroy() end
 end
 
--- ════════════════════════════════════════════════════════════════
---  Quote Spam System
--- ════════════════════════════════════════════════════════════════
-
 local QuoteSystem = {}
 QuoteSystem.__index = QuoteSystem
 
@@ -399,5 +395,88 @@ getgenv().CobraUnload = function()
         Quotes   = Quotes,
     })
 end
+
+getgenv().DetectedPlayers = getgenv().DetectedPlayers or {}
+getgenv().GodmodeNotified = getgenv().GodmodeNotified or {}
+
+getgenv().isSeat = function(part)
+	return part and (part:IsA("Seat") or part:IsA("VehicleSeat"))
+end
+
+getgenv().notify = function(player, message)
+	Library:Notify(player.Name .. " " .. message, 3)
+end
+
+getgenv().alert = function(player, reason)
+	if not DetectedPlayers[player] then
+		DetectedPlayers[player] = { TeleportFlagged = false }
+
+		if Toggles.EnableExploitNotify.Value then
+			notify(player, "Has Set Off An Exploit Detection. THEY ARE MOST LIKELY CHEATING")
+		end
+	elseif reason == "Teleport" and not DetectedPlayers[player].TeleportFlagged then
+		DetectedPlayers[player].TeleportFlagged = true
+	end
+
+	if reason == "Teleport" and Toggles.EnableTeleportNotify.Value then
+		notify(player, "Has Teleported")
+	end
+end
+
+getgenv().monitorPlayer = function(player)
+	local function setupCharacter(character)
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if not humanoid or not root then return end
+
+		task.spawn(function()
+			while humanoid.Parent and player.Parent do
+				if typeof(humanoid.Health) == "number" and humanoid.Health ~= humanoid.Health then
+					if not GodmodeNotified[player] and Toggles.EnableGodmodeNotify.Value then
+						GodmodeNotified[player] = true
+						notify(player, "Is In Godmode (Probably Not A Cheater)")
+					end
+				end
+				task.wait(1)
+			end
+		end)
+
+		humanoid.StateChanged:Connect(function(_, new)
+			if new == Enum.HumanoidStateType.FallingDown
+			or new == Enum.HumanoidStateType.Freefall
+			or new == Enum.HumanoidStateType.Ragdoll then
+			end
+		end)
+
+		humanoid:GetAttributeChangedSignal("Sitting"):Connect(function()
+			local sitting = humanoid:GetAttribute("Sit")
+			if sitting and not isSeat(humanoid.SeatPart) then
+			end
+		end)
+	end
+
+	player:GetAttributeChangedSignal("LastACPos"):Connect(function()
+		if player:GetAttribute("LastACPos") == nil then
+			alert(player, "Teleport")
+		end
+	end)
+
+	if player.Character then
+		setupCharacter(player.Character)
+	end
+	player.CharacterAdded:Connect(setupCharacter)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	if player ~= LocalPlayer then
+		monitorPlayer(player)
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
+	if player ~= LocalPlayer then
+		monitorPlayer(player)
+	end
+end)
 
 return "success"
