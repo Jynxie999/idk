@@ -453,7 +453,7 @@ local function CheckAntiCheatDisabler(player)
 	if value == nil then
 		DetectedPlayers[player].AnticheatDisablerFlagged = true
 
-		if Toggles.EnableExploitNotify and Toggles.EnableExploitNotify.Value then
+		if Toggles.EnableAnticheatDisablerDetect and Toggles.EnableAnticheatDisablerDetect.Value then
 			notify(player, "Is Using An Anticheat Disabler. They're Possibly Using Sleepyhub Or Another Cobra.gg User")
 		end
 
