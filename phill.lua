@@ -1,4 +1,4 @@
--- up
+-- down
 local Services = {
     Players = game:GetService("Players"),
     RunService = game:GetService("RunService"),
@@ -408,7 +408,6 @@ end
 getgenv().notify = function(player, message)
 	if Library and Library.Notify then
 		Library:Notify(player.Name .. " " .. message, 3)
-	else
 	end
 end
 
@@ -436,6 +435,29 @@ getgenv().alert = function(player, reason)
 
 	if reason == "MovementState" and not DetectedPlayers[player].StateFlagged then
 		DetectedPlayers[player].StateFlagged = true
+	end
+end
+
+local function CheckAntiCheatDisabler(player)
+	if not Toggles
+		or not Toggles.EnableAnticheatDisablerDetect
+		or not Toggles.EnableAnticheatDisablerDetect.Value then
+		return
+	end
+
+	if not DetectedPlayers[player] then return end
+	if DetectedPlayers[player].AnticheatDisablerFlagged then return end
+
+	local value = player:GetAttribute("LastAcPos")
+
+	if value == nil then
+		DetectedPlayers[player].AnticheatDisablerFlagged = true
+
+		if Toggles.EnableExploitNotify and Toggles.EnableExploitNotify.Value then
+			notify(player, "Is Using An Anticheat Disabler. They're Possibly Using Sleepyhub Or Another Cobra.gg User")
+		end
+
+		alert(player, "AntiCheatDisabler")
 	end
 end
 
@@ -535,39 +557,15 @@ getgenv().monitorPlayer = function(player)
 		end)
 	end
 
-local function CheckAntiCheatDisabler(player)
-	if not Toggles
-		or not Toggles.EnableAnticheatDisablerDetect
-		or not Toggles.EnableAnticheatDisablerDetect.Value then
-		return
-	end
-
-	if not DetectedPlayers[player] then return end
-	if DetectedPlayers[player].AnticheatDisablerFlagged then return end
-
-	local value = player:GetAttribute("LastAcPos")
-
-	if value == nil then
-		DetectedPlayers[player].AnticheatDisablerFlagged = true
-
-		if Toggles.EnableExploitNotify and Toggles.EnableExploitNotify.Value then
-			notify(player, "Is Using An Anticheat Disabler. There Possibly Using Sleepyhub Or Another Cobra.gg User")
+	task.delay(2, function()
+		if player.Parent then
+			CheckAntiCheatDisabler(player)
 		end
+	end)
 
-		alert(player, "AntiCheatDisabler")
-	end
-end
-
-
-task.delay(3, function()
-	if player.Parent then
+	player:GetAttributeChangedSignal("LastAcPos"):Connect(function()
 		CheckAntiCheatDisabler(player)
-	end
-end)
-
-player:GetAttributeChangedSignal("LastAcPos"):Connect(function()
-	CheckAntiCheatDisabler(player)
-end)
+	end)
 
 	if player.Character then
 		setupCharacter(player.Character)
