@@ -69,6 +69,8 @@ local CharacterLifecycle = {}
 CharacterLifecycle.__index = CharacterLifecycle
 
 function CharacterLifecycle.new(anchorSystem)
+    assert(anchorSystem, "CharacterLifecycle requires AnchorSystem")
+
     local self = setmetatable({}, CharacterLifecycle)
     self.Anchor = anchorSystem
     self.Connections = {}
@@ -119,7 +121,21 @@ function CharacterLifecycle:TryApplyToCharacter(char)
 end
 
 function CharacterLifecycle:Clear()
-    self.Anchor:Detach()
+    if not self then
+        warn("Clear called with no self")
+        return
+    end
+
+    if not self.Anchor then
+        warn("Clear called but Anchor is nil")
+    else
+        if self.Anchor.Detach then
+            self.Anchor:Detach()
+        else
+            warn("Anchor.Detach is nil")
+        end
+    end
+
     self.CurrentChar = nil
 end
 
@@ -127,6 +143,10 @@ function CharacterLifecycle:Destroy()
     for _, c in ipairs(self.Connections) do c:Disconnect() end
     self:Clear()
 end
+
+local anchor = AnchorSystem.new()
+local lifecycle = CharacterLifecycle.new(anchor)
+lifecycle:Initialize()
 
 local StaffAlertSystem = {}
 StaffAlertSystem.__index = StaffAlertSystem
