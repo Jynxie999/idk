@@ -1,4 +1,4 @@
--- down
+-- left
 local Services = {
     Players = game:GetService("Players"),
     RunService = game:GetService("RunService"),
