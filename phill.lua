@@ -358,6 +358,7 @@ function QuoteSystem:Start()
     self.Running = true
     self.Task = task.spawn(function()
         self:Fire("Welcome • Final Destination For Exploits")
+			task.wait(1)
         while self.Running do
             local q = self:GetRandom()
             self:Fire(self:Format(q))
