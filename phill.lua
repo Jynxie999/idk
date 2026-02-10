@@ -348,9 +348,15 @@ function QuoteSystem:Format(str)
 end
 
 function QuoteSystem:Fire(msg)
-    if self.Event and self.Running then
-        firesignal(self.Event.OnClientEvent, "money", msg)
-    end
+	if not (self.Event and self.Running) then
+		return
+	end
+
+	if typeof(firesignal) == "function" then
+		pcall(function()
+			firesignal(self.Event.OnClientEvent, "money", msg)
+		end)
+	end
 end
 
 function QuoteSystem:Start()
