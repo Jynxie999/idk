@@ -304,10 +304,10 @@ local BaseQuotes = {
     "Did You Know Im Looking Through Your Webcam 😛",
     "Cobra.gg - Your Final Destination For Exploits!",
     "Did You Know I Wrote 205 Of These",
-    "1370+ Loyal Buyers",
+    "1390+ Loyal Buyers",
     "Why You So Broke?",
     "Did You Know This Script Has Over 120 Features",
-    "80k+ Monthly Executions",
+    "100k+ Monthly Executions",
     "Cobra.gg",
     "200k+ Monthly Executions At Peak",
     "#1 TB3 Script",
@@ -319,6 +319,8 @@ local BaseQuotes = {
     "#1 Skid Tickler",
     "You're Executor Is Shitty",
     "Yes, Cobra.gg Is The Best",
+	"The World Is Hallow.",
+	"Your Mind Is Hallow.",
     "...!: I hate skids!",
 }
 
