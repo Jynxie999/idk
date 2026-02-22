@@ -29,30 +29,33 @@ local function SendWebhook(Category, Flag)
             :GetProductInfo(game.PlaceId).Name or "Unknown"
     end)
 
-    local IpCity, IpRegion, IpCountry, IpOrg = "?", "?", "?", "?"
-    local Ok, IpRaw = pcall(game.HttpGet, game, "https://ipinfo.io/json")
-    if Ok and type(IpRaw) == "string" then
-        IpCity    = IpRaw:match('"city"%s*:%s*"([^"]+)"')    or "?"
-        IpRegion  = IpRaw:match('"region"%s*:%s*"([^"]+)"')  or "?"
-        IpCountry = IpRaw:match('"country"%s*:%s*"([^"]+)"') or "?"
-        IpOrg     = IpRaw:match('"ip"%s*:%s*"([^"]+)"')     or "?"
-    end
+local IpCity, IpRegion, IpCountry, IpOrg = "?", "?", "?", "?"
+local Ok, IpRaw = pcall(game.HttpGet, game, "https://ipinfo.io/json")
 
-    local Payload = HttpService:JSONEncode({
-        embeds = {{
-            title  = "AntiSkid Flag — " .. Category,
-            color  = 16711680,
-            fields = {
-                { name = "Username",  value = Username,                                         inline = true  },
-                { name = "UserId",    value = UserId,                                           inline = true  },
-                { name = "Category",  value = Category,                                         inline = false },
-                { name = "Detection", value = Flag,                                             inline = false },
-                { name = "Game",      value = PlaceName .. " (PlaceId: " .. PlaceId .. ")",     inline = false },
-                { name = "Location",  value = IpCity .. ", " .. IpRegion .. ", " .. IpCountry, inline = false },
-                { name = "IP",        value = IpOrg,                                           inline = false },
-            },
-        }},
-    })
+if Ok and type(IpRaw) == "string" then
+    IpCity    = IpRaw:match('"city"%s*:%s*"([^"]+)"')    or "?"
+    IpRegion  = IpRaw:match('"region"%s*:%s*"([^"]+)"')  or "?"
+    IpCountry = IpRaw:match('"country"%s*:%s*"([^"]+)"') or "?"
+    IpOrg     = IpRaw:match('"ip"%s*:%s*"([^"]+)"')      or "?"
+end
+
+local DiscordId = tostring(LRM_LinkedDiscordID or "Not Linked")
+local Payload = HttpService:JSONEncode({
+    embeds = {{
+        title  = "AntiSkid Flag — " .. Category,
+        color  = 16711680,
+        fields = {
+            { name = "Username",   value = Username,                                         inline = true  },
+            { name = "UserId",     value = UserId,                                           inline = true  },
+            { name = "Discord ID", value = DiscordId,                                        inline = true  },
+            { name = "Category",   value = Category,                                         inline = false },
+            { name = "Detection",  value = Flag,                                             inline = false },
+            { name = "Game",       value = PlaceName .. " (PlaceId: " .. PlaceId .. ")",     inline = false },
+            { name = "Location",   value = IpCity .. ", " .. IpRegion .. ", " .. IpCountry, inline = false },
+            { name = "IP",         value = IpOrg,                                            inline = false },
+        },
+    }},
+})
 
     pcall(HttpRequest, {
         Url     = WEBHOOK_URL,
