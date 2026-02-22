@@ -151,7 +151,7 @@ local function IsLikelyRobloxFlag(Name)
 end
 
 local DexSigs = {
-    "dex",
+    
 }
 
 local SpySigs = {
