@@ -151,9 +151,7 @@ local function IsLikelyRobloxFlag(Name)
 end
 
 local DexSigs = {
-    "dex","appsframe","appscontainer","coverframe",
-    "explorerframe","propertiesframe","scriptviewer",
-    "instancetree","saveinstance","consolegui","outputgui","notebook",
+    "dex",
 }
 
 local SpySigs = {
