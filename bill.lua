@@ -52,7 +52,6 @@ local HttpRequest = (
     (fluxus  and type(fluxus.request)  == "function" and fluxus.request)    or
     nil
 )
-local DiscordId = tostring(_G.Cobra_DiscordID or "Unknown")
 
 local function SendWebhook(Category, Flag)
     if not HttpRequest then return end
@@ -84,7 +83,6 @@ local function SendWebhook(Category, Flag)
             fields = {
                 { name = "Username",   value = Username, inline = true  },
                 { name = "UserID",     value = UserId,   inline = true  },
-                { name = "Discord ID", value = DiscordId, inline = true },
                 { name = "Category",   value = Category, inline = false },
                 { name = "Detection",  value = Flag,     inline = false },
                 { name = "Game",       value = PlaceName .. " (PlaceId: " .. PlaceId .. ")", inline = false },
