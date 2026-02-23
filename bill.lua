@@ -348,7 +348,7 @@ local function CheckCobaltGlobals()
     if not G then return false end
     for _, K in ipairs(CobaltGlobalKeys) do
         if rawget(G, K) ~= nil then
-            KickClient("RemoteSpy", "Cobalt global key found - Bye noe cobalt demon ")
+            KickClient("RemoteSpy", "Cobalt global key found - Bye now cobalt demon ")
             return true
         end
     end
