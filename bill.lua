@@ -74,7 +74,7 @@ local function SendWebhook(Category, Flag)
         IpCountry = Raw:match('"country"%s*:%s*"([^"]+)"')or "?"
     end
 
-    local DiscordId = tostring(LRM_LinkedDiscordID or "Not Linked")
+    local DiscordId = tostring(LRM_LinkedDiscordID)
 
     local Ok2, Payload = pcall(HttpService.JSONEncode, HttpService, {
         embeds = {{
