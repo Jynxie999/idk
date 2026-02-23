@@ -1,4 +1,4 @@
---weee
+--wee
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -308,6 +308,14 @@ local function IsObfuscated(Name)
         return false
     end
 
+    if IsXeno() then
+        return false
+    end
+
+    if IsSolara() then
+        return false
+    end
+    
     local C = Name
         :gsub("_%d+$","")
         :gsub("^%d+_","")
