@@ -1,4 +1,4 @@
---fickk
+--yummm
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -74,9 +74,7 @@ local function SendWebhook(Category, Flag)
         IpCountry = Raw:match('"country"%s*:%s*"([^"]+)"')or "?"
     end
 
-    local DiscordId = tostring(
-        (type(LRM_LinkedDiscordID) ~= "nil" and LRM_LinkedDiscordID) or "Not Linked"
-    )
+    local DiscordId = tostring(LRM_LinkedDiscordID or "Not Linked")
 
     local Ok2, Payload = pcall(HttpService.JSONEncode, HttpService, {
         embeds = {{
