@@ -1,4 +1,4 @@
---fuckery
+--fuck me
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -74,8 +74,6 @@ local function SendWebhook(Category, Flag)
         IpCountry = Raw:match('"country"%s*:%s*"([^"]+)"')or "?"
     end
 
-    local DiscordId = _G.Cobra_DiscordID
-
     local Ok2, Payload = pcall(HttpService.JSONEncode, HttpService, {
         embeds = {{
             title  = "AntiSkid Flag — " .. Category,
@@ -83,7 +81,7 @@ local function SendWebhook(Category, Flag)
             fields = {
                 { name = "Username",   value = Username,                                       inline = true  },
                 { name = "UserID",     value = UserId,                                         inline = true  },
-                { name = "Discord ID", value = DiscordId,                                      inline = true  },
+                { name = "Discord ID", value = _G.Cobra_DiscordID,                                      inline = true  },
                 { name = "Category",   value = Category,                                       inline = false },
                 { name = "Detection",  value = Flag,                                           inline = false },
                 { name = "Game",       value = PlaceName .. " (PlaceId: " .. PlaceId .. ")",   inline = false },
