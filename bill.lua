@@ -108,6 +108,7 @@ local function ForceKick(Category, Reason)
     task.spawn(function()
         SendWebhook(Category, Reason)
         pcall(function() LocalPlayer:Kick("[" .. Category .. "] " .. Reason) end)
+            task.wait(1.25)
         while true do end
     end)
 end
