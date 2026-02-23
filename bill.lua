@@ -314,7 +314,7 @@ local function CheckDexNodeTable()
                 if typeof(K) == "Instance" then
                     N += 1
                     if N >= Cap then  
-                        KickClient("Dex", "Large Instance-keyed GC table detected")
+                        KickClient("Dex", "Large Instance-keyed GC table detected - Mr.Dex Demon")
                         return true
                     end
                 end
@@ -348,7 +348,7 @@ local function CheckCobaltGlobals()
     if not G then return false end
     for _, K in ipairs(CobaltGlobalKeys) do
         if rawget(G, K) ~= nil then
-            KickClient("RemoteSpy", "Cobalt global key found: " .. K)
+            KickClient("RemoteSpy", "Cobalt global key found - Bye noe cobalt demon ")
             return true
         end
     end
@@ -375,7 +375,7 @@ local function CheckCobaltSharedTable()
                 if rawget(V, F) ~= nil then
                     Score += 1
                     if Score >= 4 then
-                        KickClient("RemoteSpy", "Cobalt shared table detected")
+                        KickClient("RemoteSpy", "Cobalt shared table detected = youre a cobalt demon")
                         return true
                     end
                 end
@@ -404,7 +404,7 @@ local function CheckSpyGlobalsInGC()
         if type(V) == "table" then
             for _, K in ipairs(SpyGlobalKeys) do
                 if rawget(V, K) ~= nil then
-                    KickClient("RemoteSpy", "Spy global key found in GC: " .. K)
+                    KickClient("RemoteSpy", "Spy global key found in GC - hey hey hey hey good byeeeeeee")
                     return true
                 end
             end
@@ -423,10 +423,10 @@ local function CheckMetamethodHooks()
     local NC = rawget(M, "__namecall")
     local NI = rawget(M, "__newindex")
 
-    if NC and IsExecClosure(NC)       then KickClient("RemoteSpy", "__namecall replaced with executor closure") return true end
-    if NI and IsExecClosure(NI)       then KickClient("RemoteSpy", "__newindex replaced with executor closure") return true end
-    if HashMismatch(RealNamecall, NC) then KickClient("RemoteSpy", "__namecall hash mismatch — hook detected")   return true end
-    if HashMismatch(RealNewIndex, NI) then KickClient("RemoteSpy", "__newindex hash mismatch — hook detected")   return true end
+    if NC and IsExecClosure(NC)       then KickClient("RemoteSpy", "__namecall replaced with executor closure hey hey hey hey good byeeeeeee") return true end
+    if NI and IsExecClosure(NI)       then KickClient("RemoteSpy", "__newindex replaced with executor closure hey hey hey hey good byeeeeeee") return true end
+    if HashMismatch(RealNamecall, NC) then KickClient("RemoteSpy", "__namecall hash mismatch — hook detected hey hey hey hey good byeeeeeee")   return true end
+    if HashMismatch(RealNewIndex, NI) then KickClient("RemoteSpy", "__newindex hash mismatch — hook detected hey hey hey hey good byeeeeeee")   return true end
     return false
 end
 
@@ -436,8 +436,8 @@ local function CheckSignalHook()
 
     local C = rawget(SignalMeta, "__index")
     if not C then return false end
-    if IsExecClosure(C)                 then KickClient("RemoteSpy", "Signal.__index replaced with executor closure") return true end
-    if HashMismatch(RealSignalIndex, C) then KickClient("RemoteSpy", "Signal.__index hash mismatch — Connect() spy") return true end
+    if IsExecClosure(C)                 then KickClient("RemoteSpy", "Signal.__index replaced with executor closure - Bye Now") return true end
+    if HashMismatch(RealSignalIndex, C) then KickClient("RemoteSpy", "Signal.__index hash mismatch — Connect() spy - Wow👋") return true end
     return false
 end
 
@@ -449,13 +449,13 @@ local function CheckRemoteHooks()
     local IH = IsFnHooked(RF.InvokeServer)
     RE:Destroy(); RF:Destroy()
 
-    if FH then KickClient("RemoteSpy", "FireServer is hooked")   return true end
-    if IH then KickClient("RemoteSpy", "InvokeServer is hooked") return true end
+    if FH then KickClient("RemoteSpy", "FireServer is hooked Bye Now👋")   return true end
+    if IH then KickClient("RemoteSpy", "InvokeServer is hooked Bye Now👋") return true end
 
     local RE2 = Instance.new("RemoteEvent")
     local MM  = HashMismatch(RealFireServer, RE2.FireServer)
     RE2:Destroy()
-    if MM then KickClient("RemoteSpy", "FireServer hash mismatch — hook detected") return true end
+    if MM then KickClient("RemoteSpy", "FireServer hash mismatch — hook detected Bye Now👋") return true end
     return false
 end
 
@@ -468,7 +468,7 @@ local function SignalHasSpy(Signal)
         local IsForeign = SafeCall(function() return Conn.ForeignState ~= nil end)
         local Fn        = SafeCall(function() return Conn.Function end)
         if IsForeign and Fn and IsExecClosure(Fn) then
-            return true, "Suspicious foreign executor connection"
+            return true, "Suspicious foreign executor connection Bye Bye👋"
         end
     end
     return false
@@ -564,7 +564,7 @@ local function CheckStack()
     local F = 0
     for _ in T:gmatch("\n") do F += 1 end
     if F < 2 then
-        KickClient("RemoteSpy", "Stack frame deficit — setstackhidden may be active")
+        KickClient("RemoteSpy", "Stack frame deficit - Nice Try But Bye")
         return true
     end
     return false
@@ -584,9 +584,7 @@ local function CheckHookOverhead()
     RE:Destroy()
 
     if Elapsed > CFG.OVERHEAD_THRESHOLD then
-        KickClient("RemoteSpy", string.format(
-            "FireServer hook overhead: %.4fs over %d calls", Elapsed, CFG.OVERHEAD_CALLS
-        ))
+        KickClient("RemoteSpy", "FireServer hook overhead found. Bye Bye Skid!")
         return true
     end
     return false
@@ -608,7 +606,7 @@ local function CheckThreads()
     end
 
     if N > CFG.THREAD_THRESHOLD then
-        KickClient("RemoteSpy", "Excessive anonymous executor threads: " .. N)
+        KickClient("RemoteSpy", "Excessive anonymous executor threads. Bye Bye")
         return true
     end
     return false
