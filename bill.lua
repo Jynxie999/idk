@@ -52,7 +52,6 @@ local HttpRequest = (
     (fluxus  and type(fluxus.request)  == "function" and fluxus.request)    or
     nil
 )
-repeat task.wait() until _G.Cobra_DiscordID ~= nil
 local DiscordId = tostring(_G.Cobra_DiscordID or "Unknown")
 
 local function SendWebhook(Category, Flag)
