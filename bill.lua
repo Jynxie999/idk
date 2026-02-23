@@ -237,14 +237,13 @@ local ObfPatterns = {
 
 local function IsObfuscated(Name)
     local C = Name
-        :gsub("_%d+$",   "")  
-        :gsub("^%d+_",   "")   
-        :gsub("%d+$",    "")   ts
+        :gsub("_%d+$", "")
+        :gsub("^%d+_", "")
+        :gsub("%d+$", "")
 
-    if #C < 8 then return false end             
+    if #C < 8 then return false end
     if IsLikelyRobloxInternal(C) then return false end
-    if #C > 140 then return true end             
-
+    if #C > 140 then return true end
     for _, P in ipairs(ObfPatterns) do
         if C:match(P) then return true end
     end
@@ -253,12 +252,13 @@ local function IsObfuscated(Name)
         local Lower    = C:lower()
         local NonAlpha = 0
         for i = 1, #Lower do
-            if not Lower:sub(i, i):match("%a") then NonAlpha += 1 end
+            if not Lower:sub(i, i):match("%a") then
+                NonAlpha += 1
+            end
         end
         if NonAlpha / #C > 0.65 then return true end
         if Lower:match("(..)%1%1%1") then return true end
     end
-
     return false
 end
 
