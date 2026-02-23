@@ -1,4 +1,4 @@
---le
+--flee
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -536,7 +536,7 @@ local function GetExecutorName()
 
     local ok, name = pcall(identifyexecutor)
     if ok and type(name) == "string" then
-        return name:lower()
+        return name
     end
 
     return nil
