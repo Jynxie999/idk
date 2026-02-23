@@ -1,3 +1,4 @@
+-- dick and ball torture
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
