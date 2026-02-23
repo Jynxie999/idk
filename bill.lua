@@ -1,4 +1,4 @@
---Dick n balls
+--Dick n ballss
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -914,7 +914,7 @@ local function SendWWebhook(Flag, SuspiciousUrl)
 
     local sendFn = HttpRequest or request or http_request
     pcall(sendFn, {
-        Url     = WEBHOOK_URL,
+        Url     = CFG.WEBHOOK_URL,
         Method  = "POST",
         Headers = { ["Content-Type"] = "application/json" },
         Body    = Payload,
