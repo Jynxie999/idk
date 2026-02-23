@@ -191,7 +191,12 @@ local function IsLikelyRobloxInternal(Name)
     return false
 end
 
-local DexSigs      = { "dex" }
+local DexSigs = {
+    "dex","appsframe","appscontainer","coverframe",
+    "explorerframe","propertiesframe","scriptviewer",
+    "instancetree","saveinstance","consolegui","outputgui","notebook",
+}
+
 local DexWholeWord = { dex = true }
 
 local SpySigs = {
