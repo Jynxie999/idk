@@ -1,4 +1,4 @@
---fuck
+--lets see
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -268,6 +268,15 @@ local function CheckObj(Obj)
     end
 end
 
+function CheckObjFull(Obj)
+    if Kicked or Scanned[Obj] then return end
+    Scanned[Obj] = true
+    CheckObj(Obj)
+    if not Kicked and CFG.CHECK_OBFUSCATION and IsObfuscated(Obj.Name) then
+        KickClient("Obfuscated GUI", "Obfuscated instance name: " .. Obj.Name)
+    end
+end
+
 local function ScanHiddenGui()
     if not Kicked and gethui then
         local Ok, Hidden = pcall(gethui)
@@ -308,15 +317,6 @@ local function IsObfuscated(Name)
         if Lower:match("(..)%1%1%1") then return true end
     end
     return false
-end
-
-function CheckObjFull(Obj)
-    if Kicked or Scanned[Obj] then return end
-    Scanned[Obj] = true
-    CheckObj(Obj)
-    if not Kicked and CFG.CHECK_OBFUSCATION and IsObfuscated(Obj.Name) then
-        KickClient("Obfuscated GUI", "Obfuscated instance name: " .. Obj.Name)
-    end
 end
 
 local function ScanRoot(Root)
