@@ -1,4 +1,4 @@
---fuck me
+--fuck m
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -103,8 +103,9 @@ end
 local function ForceKick(Category, Reason)
     task.spawn(function()
         SendWebhook(Category, Reason)
+            task.wait(1)
         pcall(function() LocalPlayer:Kick("[" .. Category .. "] " .. Reason) end)
-            task.wait(1.25)
+            task.wait(2)
         while true do end
     end)
 end
