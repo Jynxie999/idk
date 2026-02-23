@@ -1,4 +1,4 @@
---fuck externals
+--fuck
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -494,10 +494,10 @@ local SpyKeySet = {}
 for _, K in ipairs(SpyGlobalKeys) do SpyKeySet[K] = true end
 
 local function MakeSpyGcChecker()
+    if not CFG.CHECK_SPY_GC then return nil end
     if IsDelta() then
         return false
     end
-    if not CFG.CHECK_SPY_GC then return nil end
     return function(V)
         for K in pairs(V) do
             if type(K) == "string" and SpyKeySet[K] then
