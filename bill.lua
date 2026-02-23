@@ -1,4 +1,4 @@
---lett
+--le
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -544,12 +544,17 @@ end
 
 local function IsXeno()
     local name = GetExecutorName()
-    return name and name:find("xeno") ~= nil
+    return name and name:find("Xeno") ~= nil
 end
 
 local function IsDelta()
     local name = GetExecutorName()
-    return name and name:find("delta") ~= nil
+    return name and name:find("Delta") ~= nil
+end
+
+local function IsSolara()
+    local name = GetExecutorName()
+    return name and name:find("Solara") ~= nil
 end
 
 local function CheckRemoteHooks()
@@ -561,6 +566,10 @@ local function CheckRemoteHooks()
         return false
     end
 
+    if IsSolara() then
+        return false
+    end
+    
     local RE  = Instance.new("RemoteEvent")
     local RF  = Instance.new("RemoteFunction")
 
@@ -610,7 +619,11 @@ local function ScanRemotes(Instances)
     if IsXeno() then
         return false
     end
-    
+
+    if IsSolara() then
+        return false
+    end
+
     if type(Instances) ~= "table" then return false end
     for I, Obj in ipairs(Instances) do
         if Kicked then return true end
