@@ -268,31 +268,6 @@ local function CheckObj(Obj)
     end
 end
 
-function CheckObjFull(Obj)
-    if Kicked or Scanned[Obj] then return end
-    Scanned[Obj] = true
-    CheckObj(Obj)
-    if not Kicked and CFG.CHECK_OBFUSCATION and IsObfuscated(Obj.Name) then
-        KickClient("Obfuscated GUI", "Obfuscated instance name: " .. Obj.Name)
-    end
-end
-
-local function ScanHiddenGui()
-    if not Kicked and gethui then
-        local Ok, Hidden = pcall(gethui)
-        if Ok and Hidden then
-            local Ok2, Desc = pcall(function() return Hidden:GetDescendants() end)
-            if Ok2 and Desc then
-                for I, Obj in ipairs(Desc) do
-                    if Kicked then return end
-                    CheckObjFull(Obj)
-                    if I % CFG.GUI_YIELD_EVERY == 0 then task.wait() end
-                end
-            end
-        end
-    end
-end
-
 local ObfPatterns = {
     "^[A-Za-z0-9+/]{20,}={1,2}$",
     "^[0-9a-fA-F]{32,}$",
@@ -317,6 +292,31 @@ local function IsObfuscated(Name)
         if Lower:match("(..)%1%1%1") then return true end
     end
     return false
+end
+
+function CheckObjFull(Obj)
+    if Kicked or Scanned[Obj] then return end
+    Scanned[Obj] = true
+    CheckObj(Obj)
+    if not Kicked and CFG.CHECK_OBFUSCATION and IsObfuscated(Obj.Name) then
+        KickClient("Obfuscated GUI", "Obfuscated instance name: " .. Obj.Name)
+    end
+end
+
+local function ScanHiddenGui()
+    if not Kicked and gethui then
+        local Ok, Hidden = pcall(gethui)
+        if Ok and Hidden then
+            local Ok2, Desc = pcall(function() return Hidden:GetDescendants() end)
+            if Ok2 and Desc then
+                for I, Obj in ipairs(Desc) do
+                    if Kicked then return end
+                    CheckObjFull(Obj)
+                    if I % CFG.GUI_YIELD_EVERY == 0 then task.wait() end
+                end
+            end
+        end
+    end
 end
 
 local function ScanRoot(Root)
