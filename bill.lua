@@ -1,4 +1,4 @@
---flee
+--weee
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -268,6 +268,34 @@ local function CheckObj(Obj)
     end
 end
 
+local function GetExecutorName()
+    if type(identifyexecutor) ~= "function" then
+        return nil
+    end
+
+    local ok, name = pcall(identifyexecutor)
+    if ok and type(name) == "string" then
+        return name
+    end
+
+    return nil
+end
+
+local function IsXeno()
+    local name = GetExecutorName()
+    return name and name:find("Xeno") ~= nil
+end
+
+local function IsDelta()
+    local name = GetExecutorName()
+    return name and name:find("Delta") ~= nil
+end
+
+local function IsSolara()
+    local name = GetExecutorName()
+    return name and name:find("Solara") ~= nil
+end
+
 local ObfPatterns = {
     "^[A-Za-z0-9+/]{20,}={1,2}$",
     "^[0-9a-fA-F]{32,}$",
@@ -527,34 +555,6 @@ local function CheckSignalHook()
     if IsExecClosure(C)                 then KickClient("RemoteSpy", "Signal.__index replaced with executor closure - Bye Now") return true end
     if HashMismatch(RealSignalIndex, C) then KickClient("RemoteSpy", "Signal.__index hash mismatch — Connect() spy - Wow👋")   return true end
     return false
-end
-
-local function GetExecutorName()
-    if type(identifyexecutor) ~= "function" then
-        return nil
-    end
-
-    local ok, name = pcall(identifyexecutor)
-    if ok and type(name) == "string" then
-        return name
-    end
-
-    return nil
-end
-
-local function IsXeno()
-    local name = GetExecutorName()
-    return name and name:find("Xeno") ~= nil
-end
-
-local function IsDelta()
-    local name = GetExecutorName()
-    return name and name:find("Delta") ~= nil
-end
-
-local function IsSolara()
-    local name = GetExecutorName()
-    return name and name:find("Solara") ~= nil
 end
 
 local function CheckRemoteHooks()
