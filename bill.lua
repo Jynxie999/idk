@@ -1,4 +1,4 @@
--- dick and ball torture
+--fick
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -30,10 +30,10 @@ local CFG = {
     UNC_MISS_THRESHOLD = 5,
     DEX_CONN_THRESHOLD = 4,
 
-    GUI_YIELD_EVERY    = 100,   
-    GC_YIELD_EVERY     = 50,    
-    REMOTE_YIELD_EVERY = 50,    
-    PHASE_DELAY        = 0.5,  
+    GUI_YIELD_EVERY    = 100,
+    GC_YIELD_EVERY     = 50,
+    REMOTE_YIELD_EVERY = 50,
+    PHASE_DELAY        = 0.5,
 }
 
 local Kicked = false
@@ -191,13 +191,69 @@ local function IsLikelyRobloxInternal(Name)
     return false
 end
 
+-- ── Dex signature lists (derived from Dex source) ─────────────
+--
+-- Three layers of GUI detection:
+--
+-- Layer 1 — DexSigs: exact-match substrings that appear in Dex's
+--   own GUI element names. "dex" is whole-word guarded. The rest
+--   are compound names sourced directly from Dex's create() tables
+--   that would never appear in a legitimate game GUI.
+--
+-- Layer 2 — DexScreenGuiNames: the exact ScreenGui Names that Dex
+--   injects (MainMenu, Window, Context, BrickColor, Intro). These
+--   are checked as whole exact names on ScreenGui instances only,
+--   preventing false positives from Frames named e.g. "Window".
+--
+-- Layer 3 — DexAssetIds: rbxassetid values hardcoded in Dex's GUI
+--   definition tables, checked on ImageLabel/ImageButton instances.
+--   These are Dex's icon sheet, settings icon, info icon, and the
+--   outlines border used on every Dex window frame.
+
 local DexSigs = {
-    "dex","appsframe","appscontainer","coverframe",
-    "explorerframe","propertiesframe","scriptviewer",
-    "instancetree","saveinstance","consolegui","outputgui","notebook",
+    "dex",
+    "appsframe",
+    "exploreritem",
+    "coverframe",
+    "dragselect",
+    "renamebox",
+    "propname",
+    "enumarrow",
+    "numberline",
+    "colorspacefra",
+    "colorstrip",
+    "editattribute",
+    "toggleattribu",
+    "soundpreview",
+    "windowresizer",
+    "settingsbutto",
+    "statustext",
+    "timeline",
+    "valuebox",
+    "valueframe",
+    "scrollcorner",
+    "rowbutton",
+    "searchcontain",
+    "openbutton",
 }
 
 local DexWholeWord = { dex = true }
+
+-- Exact ScreenGui names Dex injects at runtime
+local DexScreenGuiNames = {
+    MainMenu = true,
+    Context  = true,
+    BrickColor = true,
+    Intro    = true,
+}
+
+-- Asset IDs used exclusively in Dex's hardcoded GUI tables
+local DexAssetIds = {
+    ["rbxassetid://6579106223"] = true,  -- Dex large icon sheet
+    ["rbxassetid://6578871732"] = true,  -- settings icon
+    ["rbxassetid://6578933307"] = true,  -- information icon
+    ["rbxassetid://1427967925"] = true,  -- window outlines/border (every Dex window)
+}
 
 local SpySigs = {
     "cobalt","hydroxide","hydroconnections",
@@ -225,10 +281,49 @@ local function CheckObj(Obj)
         end
     end
 
+    -- Layer 2: ScreenGui exact-name check
+    local CN = Obj.ClassName
+    if CN == "ScreenGui" and DexScreenGuiNames[Name] then
+        KickClient("Dex", "Dex ScreenGui detected: " .. Name)
+        return
+    end
+
+    -- Layer 3: asset ID check on image elements
+    if (CN == "ImageLabel" or CN == "ImageButton") then
+        local Ok, Img = pcall(function() return Obj.Image end)
+        if Ok and DexAssetIds[Img] then
+            KickClient("Dex", "Dex asset ID detected on " .. CN .. ": " .. Img)
+            return
+        end
+    end
+
     for _, S in ipairs(SpySigs) do
         if L:find(S, 1, true) then
             KickClient("RemoteSpy", "GUI signature matched: " .. Name)
             return
+        end
+    end
+end
+
+-- ── Hidden GUI scan (gethui / protectgui path) ────────────────
+--
+-- Dex calls gethui() or protectgui() when available, which hides
+-- its GUIs from CoreGui and PlayerGui DescendantAdded events and
+-- from normal :GetDescendants() scans. We scan gethui() directly
+-- if the executor exposes it, catching this evasion path.
+
+local function ScanHiddenGui()
+    if not Kicked and gethui then
+        local Ok, Hidden = pcall(gethui)
+        if Ok and Hidden then
+            local Ok2, Desc = pcall(function() return Hidden:GetDescendants() end)
+            if Ok2 and Desc then
+                for I, Obj in ipairs(Desc) do
+                    if Kicked then return end
+                    CheckObjFull(Obj)
+                    if I % CFG.GUI_YIELD_EVERY == 0 then task.wait() end
+                end
+            end
         end
     end
 end
@@ -259,7 +354,7 @@ local function IsObfuscated(Name)
     return false
 end
 
-local function CheckObjFull(Obj)
+function CheckObjFull(Obj)
     if Kicked or Scanned[Obj] then return end
     Scanned[Obj] = true
     CheckObj(Obj)
@@ -287,6 +382,18 @@ pcall(function()
     end)
 end)
 
+-- Hook hidden GUI additions if gethui is available
+pcall(function()
+    if gethui then
+        local Hidden = gethui()
+        if Hidden then
+            Hidden.DescendantAdded:Connect(function(Obj)
+                if not Kicked then CheckObjFull(Obj) end
+            end)
+        end
+    end
+end)
+
 local GcCache = nil
 
 local function RefreshGcCache()
@@ -294,7 +401,7 @@ local function RefreshGcCache()
     GcCache = SafeCall(getgc, true)
 end
 
-local GcTableCheckers = {}  
+local GcTableCheckers = {}
 
 local function RunGcWalk()
     if not GcCache then return end
@@ -304,13 +411,25 @@ local function RunGcWalk()
         if Kicked then return end
         if type(V) == "table" then
             for _, Checker in ipairs(GcTableCheckers) do
-                if Checker(V) then return end  
+                if Checker(V) then return end
             end
         end
         I += 1
-        if I % YieldEvery == 0 then task.wait() end  
+        if I % YieldEvery == 0 then task.wait() end
     end
 end
+
+-- ── Dex GC checker ────────────────────────────────────────────
+--
+-- Dex maintains a file-scope `nodes` table (line 11 of its source)
+-- that maps every game Instance to a node object:
+--     nodes[instance] = { Obj = instance, Parent = parentNode, ... }
+-- This table is populated for ALL descendants of the DataModel,
+-- making it a massive Instance-keyed table in the GC heap.
+-- A table with >= 80% of all game descendants as Instance keys
+-- is an unambiguous Dex signature — no legitimate script does this.
+-- Additionally, Dex's `nilMap` table is also Instance-keyed and
+-- contributes a second detectable table of the same kind.
 
 local function MakeDexGcChecker()
     if not CFG.CHECK_DEX_GC then return nil end
@@ -499,7 +618,7 @@ local function ScanRemotes(Instances)
             end
         end
 
-        if I % CFG.REMOTE_YIELD_EVERY == 0 then task.wait() end  -- PERF-6
+        if I % CFG.REMOTE_YIELD_EVERY == 0 then task.wait() end
     end
     return false
 end
@@ -549,7 +668,7 @@ local function CheckHookOverhead()
     if not CFG.CHECK_OVERHEAD then return false end
     local RE = Instance.new("RemoteEvent")
     RE.Parent = nil
-    local BoundFire = function() RE:FireServer() end   
+    local BoundFire = function() RE:FireServer() end
     local T0 = os.clock()
     for _ = 1, CFG.OVERHEAD_CALLS do
         pcall(BoundFire)
@@ -617,6 +736,7 @@ local function RunPhase1(PGui)
     task.spawn(function()
         if not Kicked then ScanRoot(PGui)    end
         if not Kicked then ScanRoot(CoreGui) end
+        if not Kicked then ScanHiddenGui()   end
     end)
 
     if not Kicked then CheckDexConnections()  end
@@ -631,8 +751,8 @@ end
 
 local function RunPhase2()
     RefreshGcCache()
-    RebuildGcCheckers()  
-    RunGcWalk()         
+    RebuildGcCheckers()
+    RunGcWalk()
 end
 
 local function RunPhase3()
