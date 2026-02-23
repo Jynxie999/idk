@@ -1,4 +1,4 @@
---lets eee
+--let
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -276,20 +276,50 @@ local ObfPatterns = {
 }
 
 local function IsObfuscated(Name)
-    local C = Name:gsub("_%d+$",""):gsub("^%d+_",""):gsub("%d+$","")
-    if #C < 8 then return false end
-    if IsLikelyRobloxInternal(C) then return false end
-    if #C > 140 then return true end
-    for _, P in ipairs(ObfPatterns) do
-        if C:match(P) then return true end
+    if IsDelta() then
+        return false
     end
-    if #C >= 16 then
-        local Lower, NonAlpha = C:lower(), 0
-        for i = 1, #Lower do
-            if not Lower:sub(i,i):match("%a") then NonAlpha += 1 end
+
+    local C = Name
+        :gsub("_%d+$","")
+        :gsub("^%d+_","")
+        :gsub("%d+$","")
+
+    if #C < 8 then
+        return false
+    end
+
+    if IsLikelyRobloxInternal(C) then
+        return false
+    end
+
+    if #C > 140 then
+        return true
+    end
+
+    for _, P in ipairs(ObfPatterns) do
+        if C:match(P) then
+            return true
         end
-        if NonAlpha / #C > 0.65 then return true end
-        if Lower:match("(..)%1%1%1") then return true end
+    end
+
+    if #C >= 16 then
+        local Lower = C:lower()
+        local NonAlpha = 0
+
+        for i = 1, #Lower do
+            if not Lower:sub(i,i):match("%a") then
+                NonAlpha += 1
+            end
+        end
+
+        if NonAlpha / #C > 0.65 then
+            return true
+        end
+
+        if Lower:match("(..)%1%1%1") then
+            return true
+        end
     end
     return false
 end
@@ -499,18 +529,66 @@ local function CheckSignalHook()
     return false
 end
 
+local function GetExecutorName()
+    if type(identifyexecutor) ~= "function" then
+        return nil
+    end
+
+    local ok, name = pcall(identifyexecutor)
+    if ok and type(name) == "string" then
+        return name:lower()
+    end
+
+    return nil
+end
+
+local function IsXeno()
+    local name = GetExecutorName()
+    return name and name:find("xeno") ~= nil
+end
+
+local function IsDelta()
+    local name = GetExecutorName()
+    return name and name:find("delta") ~= nil
+end
+
 local function CheckRemoteHooks()
-    if not CFG.CHECK_REMOTE_HOOKS then return false end
-    local RE, RF = Instance.new("RemoteEvent"), Instance.new("RemoteFunction")
-    local FH = IsFnHooked(RE.FireServer)
-    local IH = IsFnHooked(RF.InvokeServer)
-    RE:Destroy(); RF:Destroy()
-    if FH then KickClient("RemoteSpy", "FireServer is hooked Bye Now👋")   return true end
-    if IH then KickClient("RemoteSpy", "InvokeServer is hooked Bye Now👋") return true end
+    if not CFG.CHECK_REMOTE_HOOKS then
+        return false
+    end
+
+    if IsXeno() then
+        return false
+    end
+
+    local RE  = Instance.new("RemoteEvent")
+    local RF  = Instance.new("RemoteFunction")
+
+    local FH  = IsFnHooked(RE.FireServer)
+    local IH  = IsFnHooked(RF.InvokeServer)
+
+    RE:Destroy()
+    RF:Destroy()
+
+    if FH then
+        KickClient("RemoteSpy", "FireServer is hooked Bye Now👋")
+        return true
+    end
+
+    if IH then
+        KickClient("RemoteSpy", "InvokeServer is hooked Bye Now👋")
+        return true
+    end
+
     local RE2 = Instance.new("RemoteEvent")
     local MM  = HashMismatch(RealFireServer, RE2.FireServer)
     RE2:Destroy()
-    if MM then KickClient("RemoteSpy", "FireServer hash mismatch — hook detected Bye Now👋") return true end
+
+    if MM then
+        KickClient("RemoteSpy", "FireServer hash mismatch — hook detected Bye Now👋")
+        return true
+    end
+
     return false
 end
 
