@@ -1,4 +1,4 @@
---let
+--lett
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -607,6 +607,10 @@ local function SignalHasSpy(Signal)
 end
 
 local function ScanRemotes(Instances)
+    if IsXeno() then
+        return false
+    end
+    
     if type(Instances) ~= "table" then return false end
     for I, Obj in ipairs(Instances) do
         if Kicked then return true end
