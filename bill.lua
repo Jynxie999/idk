@@ -207,9 +207,7 @@ local DexSigs = {
 local DexWholeWord = { dex = true }
 
 local DexScreenGuiNames = {
-    MainMenu = true,
     Context  = true,
-    BrickColor = true,
     Intro    = true,
 }
 
