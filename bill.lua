@@ -292,6 +292,10 @@ local function IsSolara()
     return name and name:find("Solara") ~= nil
 end
 
+local function IsTheJects()
+    return game.PlaceId == 72898534103975
+end
+
 local ObfPatterns = {
     "^[A-Za-z0-9+/]{20,}={1,2}$",
     "^[0-9a-fA-F]{32,}$",
@@ -309,6 +313,10 @@ local function IsObfuscated(Name)
     end
 
     if IsSolara() then
+        return false
+    end
+
+    if IsTheJects() then
         return false
     end
     
