@@ -1,4 +1,4 @@
---Dickk
+--Dick
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -541,19 +541,6 @@ local function CheckCobaltGlobals()
     return false
 end
 
-local function CheckMetamethodHooks()
-    if not CFG.CHECK_METAMETHODS or not getrawmetatable then return false end
-    local M = SafeCall(getrawmetatable, game)
-    if not M then return false end
-    local NC = rawget(M, "__namecall")
-    local NI = rawget(M, "__newindex")
-    if NC and IsExecClosure(NC)       then KickClient("RemoteSpy", "__namecall replaced with executor closure hey hey hey hey good byeeeeeee") return true end
-    if NI and IsExecClosure(NI)       then KickClient("RemoteSpy", "__newindex replaced with executor closure hey hey hey hey good byeeeeeee") return true end
-    if HashMismatch(RealNamecall, NC) then KickClient("RemoteSpy", "__namecall hash mismatch — hook detected hey hey hey hey good byeeeeeee")  return true end
-    if HashMismatch(RealNewIndex, NI) then KickClient("RemoteSpy", "__newindex hash mismatch — hook detected hey hey hey hey good byeeeeeee")  return true end
-    return false
-end
-
 local function CheckSignalHook()
     if not CFG.CHECK_SIGNAL or not SignalMeta then return false end
     local C = rawget(SignalMeta, "__index")
@@ -793,7 +780,6 @@ local function RunPhase1(PGui)
 
     if not Kicked then CheckDexConnections()  end
     if not Kicked then CheckCobaltGlobals()   end
-    if not Kicked then CheckMetamethodHooks() end
     if not Kicked then CheckSignalHook()      end
     if not Kicked then CheckRemoteHooks()     end
     if not Kicked then CheckFenvSpoof()       end
