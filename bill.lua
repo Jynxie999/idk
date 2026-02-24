@@ -1,4 +1,4 @@
---Dickk ball
+--Dickk
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -292,6 +292,11 @@ local function IsSolara()
     return name and name:find("Solara") ~= nil
 end
 
+local function IsVelo()
+    local name = GetExecutorName()
+    return name and name:find("Velocity") ~= nil
+end
+
 local function IsTheJects()
     return game.PlaceId == 72898534103975
 end
@@ -317,6 +322,10 @@ local function IsObfuscated(Name)
     end
 
     if IsTheJects() then
+        return false
+    end
+
+    if IsVelo() then
         return false
     end
     
@@ -566,6 +575,10 @@ local function CheckRemoteHooks()
     if IsSolara() then
         return false
     end
+
+    if IsVelo() then
+        return false
+    end
     
     local RE  = Instance.new("RemoteEvent")
     local RF  = Instance.new("RemoteFunction")
@@ -618,6 +631,10 @@ local function ScanRemotes(Instances)
     end
 
     if IsSolara() then
+        return false
+    end
+
+    if IsVelo() then
         return false
     end
 
