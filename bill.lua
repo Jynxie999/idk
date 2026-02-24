@@ -1,4 +1,4 @@
---Dick
+--cock
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -7,7 +7,6 @@ local HttpService = game:GetService("HttpService")
 local CFG = {
     WEBHOOK_URL        = "https://discord.com/api/webhooks/1475189225392701521/YfX3ZfF2uPdxDU-7SkGukEZbDZXoJrb_qvlCykdoYftM-dUr7sKPrFGThPOCYLso-1E_",
 
-    CHECK_OBFUSCATION  = true,
     CHECK_DEX_GC       = true,
     CHECK_DEX_CONNS    = true,
     CHECK_COBALT       = true,
@@ -295,91 +294,12 @@ end
 local function IsVelo()
     local name = GetExecutorName()
     return name and name:find("Velocity") ~= nil
-end
-
-local function IsTheJects()
-    return game.PlaceId == 72898534103975
-end
-
-local ObfPatterns = {
-    "^[A-Za-z0-9+/]{20,}={1,2}$",
-    "^[0-9a-fA-F]{32,}$",
-    "[\0-\8\14-\31]",
-    "^[^%w%s]{8,}$",
-}
-
-local function IsObfuscated(Name)
-    if IsDelta() then
-        return false
-    end
-
-    if IsXeno() then
-        return false
-    end
-
-    if IsSolara() then
-        return false
-    end
-
-    if IsTheJects() then
-        return false
-    end
-
-    if IsVelo() then
-        return false
-    end
-    
-    local C = Name
-        :gsub("_%d+$","")
-        :gsub("^%d+_","")
-        :gsub("%d+$","")
-
-    if #C < 8 then
-        return false
-    end
-
-    if IsLikelyRobloxInternal(C) then
-        return false
-    end
-
-    if #C > 140 then
-        return true
-    end
-
-    for _, P in ipairs(ObfPatterns) do
-        if C:match(P) then
-            return true
-        end
-    end
-
-    if #C >= 16 then
-        local Lower = C:lower()
-        local NonAlpha = 0
-
-        for i = 1, #Lower do
-            if not Lower:sub(i,i):match("%a") then
-                NonAlpha += 1
-            end
-        end
-
-        if NonAlpha / #C > 0.65 then
-            return true
-        end
-
-        if Lower:match("(..)%1%1%1") then
-            return true
-        end
-    end
-    return false
-end
+en
 
 function CheckObjFull(Obj)
     if Kicked or Scanned[Obj] then return end
     Scanned[Obj] = true
     CheckObj(Obj)
-    if not Kicked and CFG.CHECK_OBFUSCATION and IsObfuscated(Obj.Name) then
-        KickClient("Obfuscated GUI", "Obfuscated instance name: " .. Obj.Name)
-    end
 end
 
 local function ScanHiddenGui()
