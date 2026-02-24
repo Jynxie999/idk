@@ -1,4 +1,4 @@
---Dick ballss
+--Dick
 local Players     = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local CoreGui     = game:GetService("CoreGui")
@@ -493,28 +493,10 @@ local SpyGlobalKeys = {
 local SpyKeySet = {}
 for _, K in ipairs(SpyGlobalKeys) do SpyKeySet[K] = true end
 
-local function MakeSpyGcChecker()
-    if not CFG.CHECK_SPY_GC then return nil end
-    if IsDelta() then
-        return false
-    end
-    return function(V)
-        for K in pairs(V) do
-            if type(K) == "string" and SpyKeySet[K] then
-                KickClient("RemoteSpy", "Spy global key found in GC - hey hey hey hey good byeeeeeee")
-                return true
-            end
-        end
-        return false
-    end
-end
-
 local function RebuildGcCheckers()
     GcTableCheckers = {}
-    local SpyChecker    = MakeSpyGcChecker()
     local CobaltChecker = MakeCobaltTableChecker()
     local DexChecker    = MakeDexGcChecker()
-    if SpyChecker    then GcTableCheckers[#GcTableCheckers+1] = SpyChecker    end
     if CobaltChecker then GcTableCheckers[#GcTableCheckers+1] = CobaltChecker end
     if DexChecker    then GcTableCheckers[#GcTableCheckers+1] = DexChecker    end
 end
