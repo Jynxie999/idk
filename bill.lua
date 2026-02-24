@@ -195,10 +195,8 @@ end
 
 local DexSigs = {
     "dex",
-    "appsframe",
     "exploreritem",
     "propname",
-    "numberline",
     "editattribute",
     "soundpreview",
     "timeline",
