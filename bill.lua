@@ -1,4 +1,4 @@
---fuckery
+--fuck
 local Players      = game:GetService("Players")
 local LocalPlayer  = Players.LocalPlayer
 local CoreGui      = game:GetService("CoreGui")
@@ -162,10 +162,15 @@ for _, N in ipairs(UncNames) do
 end
 
 local function IsExecClosure(Fn)
-    if type(Fn) ~= "function" then return false end
-    if isexecutorclosure and isexecutorclosure(Fn) then return true end
-    if iscclosure and islclosure then
-        if not iscclosure(Fn) and not islclosure(Fn) then return true end
+    if type(Fn) ~= "function" then
+        return false
+    end
+
+    if typeof(isexecutorclosure) == "function" then
+        local ok, result = pcall(isexecutorclosure, Fn)
+        if ok and result then
+            return true
+        end
     end
     return false
 end
