@@ -100,22 +100,59 @@ end
 function CharacterLifecycle:TryApplyToCharacter(char)
     if self.CurrentChar == char then return end
     self:Clear()
+
     local hum = char:WaitForChild("Humanoid", 8)
     local root = char:WaitForChild("HumanoidRootPart", 8)
     if not (hum and root) then return end
-    local stable = 0
-    local last = root.Position
-    for _ = 1, 60 do
-        if not root.Parent or hum.Health <= 0 then return end
-        local pos = root.Position
-        if (pos - last).Magnitude < 0.12 then stable += 1 else stable = 0 end
-        if stable >= 4 then break end
-        last = pos
-        task.wait()
-    end
-    if not root.Parent or hum.Health <= 0 then return end
+
     self.CurrentChar = char
-    self.Anchor:Attach(root)
+
+    local function AttachIfValid()
+        if not self.CurrentChar then return end
+        if hum.Health <= 0 then return end
+        if hum.Sit then return end
+        if not root.Parent then return end
+
+        self.Anchor:Attach(root)
+    end
+
+    local function DetachIfNeeded()
+        self.Anchor:Detach()
+    end
+
+    task.spawn(function()
+        local stable = 0
+        local last = root.Position
+
+        for _ = 1, 60 do
+            if not root.Parent or hum.Health <= 0 then return end
+            local pos = root.Position
+            if (pos - last).Magnitude < 0.12 then
+                stable += 1
+            else
+                stable = 0
+            end
+            if stable >= 4 then break end
+            last = pos
+            task.wait()
+        end
+
+        if hum.Sit then
+            return 
+        end
+
+        AttachIfValid()
+    end)
+
+    table.insert(self.Connections, hum:GetPropertyChangedSignal("Sit"):Connect(function()
+        if hum.Sit then
+            DetachIfNeeded()
+        else
+            task.wait(0.1)
+            AttachIfValid()
+        end
+    end))
+
     table.insert(self.Connections, hum.Died:Connect(function()
         self:Clear()
     end))
