@@ -445,15 +445,6 @@ local function CheckSpyGlobals()
     return false
 end
 
-local function CheckSignalHook()
-    if not CFG.CHECK_SIGNAL or not SignalMeta then return false end
-    local C = rawget(SignalMeta, "__index")
-    if not C then return false end
-    if IsExecClosure(C)                 then KickClient("RemoteSpy", "Signal.__index replaced with executor closure")  return true end
-    if HashMismatch(RealSignalIndex, C) then KickClient("RemoteSpy", "Signal.__index hash mismatch")                  return true end
-    return false
-end
-
 local function CheckRemoteHooks()
     if not CFG.CHECK_REMOTE_HOOKS then return false end
     if BYPASS_HOOK_CHECK then return false end
@@ -648,7 +639,6 @@ local function RunPhase1(PGui)
     if not Kicked then CheckDexConnections()  end
     if not Kicked then CheckCobaltGlobals()   end
     if not Kicked then CheckSpyGlobals()      end
-    if not Kicked then CheckSignalHook()      end
     if not Kicked then CheckRemoteHooks()     end
     if not Kicked then CheckFenvSpoof()       end
     if not Kicked then CheckStack()           end
