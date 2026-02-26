@@ -1,4 +1,4 @@
---fuckk
+--fuck
 local Players      = game:GetService("Players")
 local LocalPlayer  = Players.LocalPlayer
 local CoreGui      = game:GetService("CoreGui")
@@ -484,61 +484,6 @@ local function SignalHasSpy(Signal)
     return false
 end
 
-local function ScanRemotes(Instances)
-    if BYPASS_HOOK_CHECK then return false end
-    if type(Instances) ~= "table" then return false end
-    for I, Obj in ipairs(Instances) do
-        if Kicked then return true end
-        local CN = Obj.ClassName
-
-        if CN == "RemoteEvent" or CN == "UnreliableRemoteEvent" then
-            local S, R = SignalHasSpy(Obj.OnClientEvent)
-            if S then KickClient("RemoteSpy", (R or "spy") .. " on " .. Obj:GetFullName()) return true end
-
-        elseif CN == "RemoteFunction" then
-            if getcallbackvalue then
-                local CB = SafeCall(getcallbackvalue, Obj, "OnClientInvoke")
-                if CB and IsExecClosure(CB) then
-                    KickClient("RemoteSpy", "OnClientInvoke executor closure: " .. Obj:GetFullName())
-                    return true
-                end
-            end
-
-        elseif CN == "BindableEvent" then
-            local S, R = SignalHasSpy(Obj.Event)
-            if S then KickClient("RemoteSpy", (R or "spy") .. " on BindableEvent: " .. Obj:GetFullName()) return true end
-
-        elseif CN == "BindableFunction" then
-            if getcallbackvalue then
-                local CB = SafeCall(getcallbackvalue, Obj, "OnInvoke")
-                if CB and IsExecClosure(CB) then
-                    KickClient("RemoteSpy", "BindableFunction executor closure: " .. Obj:GetFullName())
-                    return true
-                end
-            end
-        end
-
-        if I % CFG.REMOTE_YIELD_EVERY == 0 then task.wait() end
-    end
-    return false
-end
-
-local function CheckRemoteSpyConns()
-    if not CFG.CHECK_REMOTE_CONNS then return false end
-    for _, Svc in ipairs({ game:GetService("ReplicatedStorage"), game:GetService("Players"), workspace }) do
-        local Ok, D = pcall(function() return Svc:GetDescendants() end)
-        if Ok and ScanRemotes(D) then return true end
-    end
-    return false
-end
-
-local function CheckNilRemotes()
-    if not CFG.CHECK_NIL_REMOTES or not getnilinstances or not getconnections then return false end
-    local Nils = SafeCall(getnilinstances)
-    if not Nils then return false end
-    return ScanRemotes(Nils)
-end
-
 local function CheckFenvSpoof()
     if not CFG.CHECK_FENV or not getfenv then return false end
     local Env = SafeCall(getfenv, 1)
@@ -561,24 +506,6 @@ local function CheckStack()
     local F = 0
     for _ in T:gmatch("\n") do F += 1 end
     if F < 2 then KickClient("RemoteSpy", "Stack frame deficit") return true end
-    return false
-end
-
-local function CheckHookOverhead()
-    if not CFG.CHECK_OVERHEAD then return false end
-    if BYPASS_HOOK_CHECK then return false end
-    local RE = Instance.new("RemoteEvent")
-    RE.Parent = nil
-    local T0 = os.clock()
-    for _ = 1, CFG.OVERHEAD_CALLS do
-        pcall(function() RE:FireServer() end)
-    end
-    local Elapsed = os.clock() - T0
-    RE:Destroy()
-    if Elapsed > CFG.OVERHEAD_THRESHOLD then
-        KickClient("RemoteSpy", "FireServer hook overhead detected")
-        return true
-    end
     return false
 end
 
@@ -651,17 +578,10 @@ local function RunPhase2()
     RunGcWalk()
 end
 
-local function RunPhase3()
-    if not Kicked then CheckRemoteSpyConns()            end
-    if not Kicked then CheckNilRemotes()                end
-    if not Kicked then task.spawn(CheckHookOverhead)    end
-end
-
 local function RunAllChecks(PGui)
     if Kicked then return end
     task.spawn(function() RunPhase1(PGui) end)
-    task.delay(CFG.PHASE_DELAY,     function() if not Kicked then RunPhase2() end end)
-    task.delay(CFG.PHASE_DELAY * 2, function() if not Kicked then RunPhase3() end end)
+    task.delay(CFG.PHASE_DELAY, function() if not Kicked then RunPhase2() end end)
 end
 
 task.spawn(function()
